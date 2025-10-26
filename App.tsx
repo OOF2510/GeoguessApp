@@ -16,20 +16,34 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getRandomImage, normalizeCountry, matchGuess, ImageResult } from './geoApiUtils';
+import { getImageWithCountry, normalizeCountry, matchGuess } from './geoApiUtils';
 import ImageViewer from 'react-native-image-zoom-viewer';
-
 const { width: screenWidth } = Dimensions.get('window');
+
+interface ImageResult {
+  url: string;
+  coord: {
+    lat: number;
+    lon: number;
+  };
+}
+
+interface CountryInfo {
+  country: string;
+  countryCode: string;
+  displayName: string;
+}
 
 interface PrefetchedRound {
   image: ImageResult;
+  countryInfo: CountryInfo | null;
 }
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
-  const [apiError, setApiError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [country, setCountry] = useState<string | null>(null);
+  const [countryCode, setCountryCode] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [coord, setCoord] = useState<{ lat: number; lon: number } | null>(null);
   const [guess, setGuess] = useState<string>('');
@@ -46,10 +60,11 @@ const App: React.FC = () => {
   const prefetchNextRound = async (): Promise<void> => {
     const requestId: number = ++prefetchIdRef.current;
     try {
-      const img: ImageResult | null = await getRandomImage();
-      if (!img) return;
+      const result = await getImageWithCountry();
+      if (!result) return;
+
       if (prefetchIdRef.current === requestId) {
-        setNextRound({ image: img });
+        setNextRound({ image: result.image, countryInfo: result.countryInfo });
       }
     } catch (e) {
       console.error(e);
@@ -60,10 +75,10 @@ const App: React.FC = () => {
     const hasPrefetched: boolean = nextRound !== null;
     if (!hasPrefetched) {
       setLoading(true);
-      setApiError(null);
     }
     setImageUrl(null);
     setCountry(null);
+    setCountryCode(null);
     setDisplayName(null);
     setCoord(null);
     setGuess('');
@@ -77,39 +92,49 @@ const App: React.FC = () => {
       if (roundData) {
         setNextRound(null);
       } else {
-        const img: ImageResult | null = await getRandomImage();
-        if (!img) {
-          setApiError('Failed to load game data. Check connection.');
+        const result = await getImageWithCountry();
+        if (!result) {
+          Alert.alert('Error', 'Could not fetch an image. Try again.');
+          if (!hasPrefetched) {
+            setLoading(false);
+          }
           return;
         }
-        roundData = { image: img };
+        roundData = { image: result.image, countryInfo: result.countryInfo };
       }
 
       if (!roundData) {
-        setApiError('Failed to load game data. Check connection.');
+        Alert.alert('Error', 'Could not fetch an image. Try again.');
+        if (!hasPrefetched) {
+          setLoading(false);
+        }
         return;
       }
 
       setImageUrl(roundData.image.url);
       setCoord(roundData.image.coord);
 
-      setCountry(roundData.image.countryName || null);
-      setDisplayName(roundData.image.countryName || 'Unknown');
+      if (roundData.countryInfo) {
+        setCountry(roundData.countryInfo.country);
+        setCountryCode(roundData.countryInfo.countryCode);
+        setDisplayName(roundData.countryInfo.displayName);
+      } else {
+        setDisplayName('Unknown');
+      }
 
       prefetchNextRound();
     } catch (e) {
-      setApiError('Network error. Please try again.');
       console.error(e);
-    } finally {
-      setLoading(false);
+      Alert.alert('Error', 'Failed to start game.');
     }
+    setLoading(false);
   };
 
   const submitGuess = (): void => {
     if (!guess.trim()) return;
 
     const normalizedGuess: string = normalizeCountry(guess);
-    const isCorrect: boolean = matchGuess(normalizedGuess, country, null);
+    const isCorrect: boolean = matchGuess(normalizedGuess, country, countryCode);
     const newGuessCount: number = guessCount + 1;
     setGuessCount(newGuessCount);
 
@@ -247,20 +272,11 @@ const App: React.FC = () => {
       color: '#FFF',
       fontSize: 16,
     },
-    bottomContainer: {
+    scoreContainer: {
       position: 'absolute',
       bottom: 20,
       left: 20,
       right: 20,
-      alignItems: 'center',
-    },
-    attributionText: {
-      color: '#BBBBBB',
-      fontSize: 12,
-      marginBottom: 8,
-    },
-    scoreContainer: {
-      width: '100%',
       flexDirection: 'row',
       justifyContent: 'space-between',
     },
@@ -268,11 +284,14 @@ const App: React.FC = () => {
       color: '#FFFFFF',
       fontSize: 16,
     },
-    errorText: {
-      fontSize: 16,
-      marginVertical: 15,
+    attribution: {
+      position: 'absolute',
+      bottom: 70,
+      left: 20,
+      right: 20,
+      color: '#888888',
+      fontSize: 12,
       textAlign: 'center',
-      color: '#FF6B6B',
     },
   });
 
@@ -293,12 +312,11 @@ const App: React.FC = () => {
     const loadHighScore = async () => {
       try {
         const stored = await AsyncStorage.getItem('highScore');
-        const score = parseInt(stored || '0');
-        if (!isNaN(score)) {
-          setHighScore(score);
+        if (stored) {
+          setHighScore(parseInt(stored));
         }
       } catch (e) {
-        console.error('Storage read error:', e);
+        console.error(e);
       }
     };
     loadHighScore();
@@ -313,17 +331,15 @@ const App: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.title}>GeoGuess</Text>
         {loading && <Text style={{color: '#FFF'}}>Loading...</Text>}
-        {apiError && <Text style={styles.errorText}>{apiError}</Text>}
         {imageUrl && (
           <TouchableOpacity 
             style={styles.imageContainer}
             onPress={() => setZoomImage(true)}
           >
             <Image 
-              source={{ uri: imageUrl || 'placeholder_uri' }} 
-              style={styles.image}
-              defaultSource={require('../assets/icon.png')}
-              onError={() => setImageUrl(null)}
+              source={{ uri: imageUrl ?? undefined }} 
+              style={styles.image} 
+              resizeMode="cover"
             />
           </TouchableOpacity>
         )}
@@ -379,12 +395,10 @@ const App: React.FC = () => {
           saveToLocalByLongPress={false}
         />
       </Modal>
-      <View style={styles.bottomContainer}>
-        <Text style={styles.attributionText}>Images provided via Mapilliary</Text>
-        <View style={styles.scoreContainer}>
-          <Text style={styles.scoreText}>High Score: {highScore}</Text>
-          <Text style={styles.scoreText}>Score: {currentScore}</Text>
-        </View>
+      <Text style={styles.attribution}>Images provided via Mapillary</Text>
+      <View style={styles.scoreContainer}>
+        <Text style={styles.scoreText}>High Score: {highScore}</Text>
+        <Text style={styles.scoreText}>Score: {currentScore}</Text>
       </View>
     </SafeAreaView>
   );
