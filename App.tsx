@@ -297,86 +297,88 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.container}>
-        <ScrollView 
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.title}>GeoGuess</Text>
-          {loading && <Text style={{color: '#FFF'}}>Loading...</Text>}
-          {imageUrl && (
-            <TouchableOpacity 
-              style={styles.imageContainer}
-              onPress={() => setZoomImage(true)}
-            >
-              <Image 
-                source={{ uri: imageUrl ?? undefined }} 
-                style={styles.image} 
-                resizeMode="cover"
-              />
-            </TouchableOpacity>
-          )}
-          {!gameOver && imageUrl && (
-            <>
-              <Text style={styles.prompt}>Guess the country! (Guess {guessCount + 1}/3)</Text>
-              <TextInput
-                style={styles.input}
-                value={guess}
-                onChangeText={setGuess}
-                onSubmitEditing={submitGuess}
-                placeholder="Enter country name"
-                placeholderTextColor="#888"
-              />
-              <TouchableOpacity style={styles.button} onPress={submitGuess}>
-                <Text style={styles.buttonText}>Submit Guess</Text>
+    <>
+      <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.title}>GeoGuess</Text>
+            {loading && <Text style={{color: '#FFF'}}>Loading...</Text>}
+            {imageUrl && (
+              <TouchableOpacity 
+                style={styles.imageContainer}
+                onPress={() => setZoomImage(true)}
+              >
+                <Image 
+                  source={{ uri: imageUrl ?? undefined }} 
+                  style={styles.image} 
+                  resizeMode="cover"
+                />
               </TouchableOpacity>
-            </>
-          )}
-          {feedback && (
-            <Text style={[
-              styles.feedback, 
-              feedback.includes('✅') ? {color: '#4CAF50'} : {color: '#FF6B6B'}
-            ]}>
-              {feedback}
-            </Text>
-          )}
-          {incorrectGuesses.length > 0 && (
-            <View style={{width: '80%'}}>
-              <Text style={styles.incorrectTitle}>Previous Guesses:</Text>
-              {incorrectGuesses.map((g: string, i: number) => (
-                <Text key={i} style={styles.incorrect}>• {g}</Text>
-              ))}
-            </View>
-          )}
-          {gameOver && (
-            <TouchableOpacity style={styles.buttonNext} onPress={startGame}>
-              <Text style={styles.buttonText}>Next Game</Text>
-            </TouchableOpacity>
-          )}
-        </ScrollView>
+            )}
+            {!gameOver && imageUrl && (
+              <>
+                <Text style={styles.prompt}>Guess the country! (Guess {guessCount + 1}/3)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={guess}
+                  onChangeText={setGuess}
+                  onSubmitEditing={submitGuess}
+                  placeholder="Enter country name"
+                  placeholderTextColor="#888"
+                />
+                <TouchableOpacity style={styles.button} onPress={submitGuess}>
+                  <Text style={styles.buttonText}>Submit Guess</Text>
+                </TouchableOpacity>
+              </>
+            )}
+            {feedback && (
+              <Text style={[
+                styles.feedback, 
+                feedback.includes('✅') ? {color: '#4CAF50'} : {color: '#FF6B6B'}
+              ]}>
+                {feedback}
+              </Text>
+            )}
+            {incorrectGuesses.length > 0 && (
+              <View style={{width: '80%'}}>
+                <Text style={styles.incorrectTitle}>Previous Guesses:</Text>
+                {incorrectGuesses.map((g: string, i: number) => (
+                  <Text key={i} style={styles.incorrect}>• {g}</Text>
+                ))}
+              </View>
+            )}
+            {gameOver && (
+              <TouchableOpacity style={styles.buttonNext} onPress={startGame}>
+                <Text style={styles.buttonText}>Next Game</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
 
-        <Modal 
-          visible={zoomImage} 
-          transparent={true}
-          onRequestClose={() => setZoomImage(false)}
-        >
-          <ImageViewer 
-            imageUrls={[{ url: imageUrl ?? '' }]}
-            onCancel={() => setZoomImage(false)}
-            enableSwipeDown={true}
-            onSwipeDown={() => setZoomImage(false)}
-            saveToLocalByLongPress={false}
-          />
-        </Modal>
-      </SafeAreaView>
+          <Modal 
+            visible={zoomImage} 
+            transparent={true}
+            onRequestClose={() => setZoomImage(false)}
+          >
+            <ImageViewer 
+              imageUrls={[{ url: imageUrl ?? '' }]}
+              onCancel={() => setZoomImage(false)}
+              enableSwipeDown={true}
+              onSwipeDown={() => setZoomImage(false)}
+              saveToLocalByLongPress={false}
+            />
+          </Modal>
+        </SafeAreaView>
+      </View>
       
       <Text style={styles.attribution}>Images provided via Mapillary</Text>
       <View style={styles.scoreContainer}>
         <Text style={styles.scoreText}>High Score: {highScore}</Text>
         <Text style={styles.scoreText}>Score: {currentScore}</Text>
       </View>
-    </View>
+    </>
   );
 };
 
