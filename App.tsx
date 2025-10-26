@@ -14,6 +14,8 @@ import {
   Dimensions,
   BackHandler,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getImageWithCountry, normalizeCountry, matchGuess } from './geoApiUtils';
@@ -273,18 +275,21 @@ const App: React.FC = () => {
       fontSize: 16,
     },
     scoreContainer: {
+      width: '100%',
       position: 'absolute',
       bottom: 20,
       left: 20,
       right: 20,
       flexDirection: 'row',
       justifyContent: 'space-between',
+      zIndex: 10,
     },
     scoreText: {
       color: '#FFFFFF',
       fontSize: 16,
     },
     attribution: {
+      width: '100%',
       position: 'absolute',
       bottom: 70,
       left: 20,
@@ -292,6 +297,10 @@ const App: React.FC = () => {
       color: '#888888',
       fontSize: 12,
       textAlign: 'center',
+      zIndex: 10,
+    },
+    footer: {
+      height: 120, // Space for attribution and scores
     },
   });
 
@@ -327,8 +336,13 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+    >
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.title}>GeoGuess</Text>
         {loading && <Text style={{color: '#FFF'}}>Loading...</Text>}
         {imageUrl && (
@@ -380,27 +394,30 @@ const App: React.FC = () => {
             <Text style={styles.buttonText}>Next Game</Text>
           </TouchableOpacity>
         )}
-      </ScrollView>
+          <View style={styles.footer} />
+        </ScrollView>
 
-      <Modal 
-        visible={zoomImage} 
-        transparent={true}
-        onRequestClose={() => setZoomImage(false)}
-      >
-        <ImageViewer 
-          imageUrls={[{ url: imageUrl ?? '' }]}
-          onCancel={() => setZoomImage(false)}
-          enableSwipeDown={true}
-          onSwipeDown={() => setZoomImage(false)}
-          saveToLocalByLongPress={false}
-        />
-      </Modal>
-      <Text style={styles.attribution}>Images provided via Mapillary</Text>
-      <View style={styles.scoreContainer}>
-        <Text style={styles.scoreText}>High Score: {highScore}</Text>
-        <Text style={styles.scoreText}>Score: {currentScore}</Text>
-      </View>
-    </SafeAreaView>
+        <Modal 
+          visible={zoomImage} 
+          transparent={true}
+          onRequestClose={() => setZoomImage(false)}
+        >
+          <ImageViewer 
+            imageUrls={[{ url: imageUrl ?? '' }]}
+            onCancel={() => setZoomImage(false)}
+            enableSwipeDown={true}
+            onSwipeDown={() => setZoomImage(false)}
+            saveToLocalByLongPress={false}
+          />
+        </Modal>
+        
+        <Text style={styles.attribution}>Images provided via Mapillary</Text>
+        <View style={styles.scoreContainer}>
+          <Text style={styles.scoreText}>High Score: {highScore}</Text>
+          <Text style={styles.scoreText}>Score: {currentScore}</Text>
+        </View>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 };
 
