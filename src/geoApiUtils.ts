@@ -11,10 +11,7 @@ interface ImageResult {
 
 async function getRandomImage(): Promise<ImageResult | null> {
   try {
-    const response = await axios.get('https://geo.api.oof2510.space/getImage', {
-      timeout: 10000,
-      headers: { 'User-Agent': 'geoguessr-app/1.0' }
-    });
+    const response = await axios.get('https://geo.api.oof2510.space/getImage');
 
     if (!response.data || !response.data.imageUrl || !response.data.coordinates) {
       console.error('Invalid response from API:', response.data);
