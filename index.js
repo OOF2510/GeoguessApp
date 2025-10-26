@@ -3,12 +3,11 @@
  */
 
 import { AppRegistry } from 'react-native';
+import { View, Text, Button } from 'react-native';
+import { ErrorBoundary } from 'react-error-boundary';
 import App from './src/App.tsx';
 import { name as appName } from './app.json';
-import { ErrorBoundary } from 'react-error-boundary';
-import { View, Text, Button } from 'react-native';
 
-AppRegistry.registerComponent(appName, () => App);
 const ErrorFallback = ({error, resetErrorBoundary}) => (
   <View style={{flex:1, justifyContent:'center', alignItems:'center'}}>
     <Text>App Crashed</Text>
@@ -17,11 +16,13 @@ const ErrorFallback = ({error, resetErrorBoundary}) => (
   </View>
 );
 
-AppRegistry.registerComponent(appName, () => () => (
+const Root = () => (
   <ErrorBoundary 
     FallbackComponent={ErrorFallback}
     onReset={() => {}}
   >
     <App />
   </ErrorBoundary>
-));
+);
+
+AppRegistry.registerComponent(appName, () => Root);

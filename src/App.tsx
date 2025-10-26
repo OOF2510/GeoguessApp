@@ -322,7 +322,7 @@ const App: React.FC = () => {
             <Image 
               source={{ uri: imageUrl || 'placeholder_uri' }} 
               style={styles.image}
-              defaultSource={require('./assets/placeholder.png')}
+              defaultSource={require('../assets/icon.png')}
               onError={() => setImageUrl(null)}
             />
           </TouchableOpacity>
