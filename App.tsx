@@ -12,8 +12,6 @@ import {
   Modal,
   Dimensions,
   BackHandler,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getImageWithCountry, normalizeCountry, matchGuess } from './geoApiUtils';
@@ -162,7 +160,6 @@ const App: React.FC = () => {
   };
 
 
-
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -189,7 +186,6 @@ const App: React.FC = () => {
       height: 200,
       borderRadius: 8,
     },
-
     prompt: {
       fontSize: 18,
       marginBottom: 10,
@@ -246,23 +242,19 @@ const App: React.FC = () => {
       fontSize: 14,
       color: '#FF6B6B',
     },
-
     scoreContainer: {
-      width: '100%',
       position: 'absolute',
       bottom: 20,
       left: 20,
       right: 20,
       flexDirection: 'row',
       justifyContent: 'space-between',
-      zIndex: 10,
     },
     scoreText: {
       color: '#FFFFFF',
       fontSize: 16,
     },
     attribution: {
-      width: '100%',
       position: 'absolute',
       bottom: 70,
       left: 20,
@@ -270,10 +262,6 @@ const App: React.FC = () => {
       color: '#888888',
       fontSize: 12,
       textAlign: 'center',
-      zIndex: 10,
-    },
-    footer: {
-      height: 120, // Space for attribution and scores
     },
   });
 
@@ -309,65 +297,63 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-    >
+    <View style={styles.container}>
       <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.title}>GeoGuess</Text>
-        {loading && <Text style={{color: '#FFF'}}>Loading...</Text>}
-        {imageUrl && (
-          <TouchableOpacity 
-            style={styles.imageContainer}
-            onPress={() => setZoomImage(true)}
-          >
-            <Image 
-              source={{ uri: imageUrl ?? undefined }} 
-              style={styles.image} 
-              resizeMode="cover"
-            />
-          </TouchableOpacity>
-        )}
-        {!gameOver && imageUrl && (
-          <>
-            <Text style={styles.prompt}>Guess the country! (Guess {guessCount + 1}/3)</Text>
-            <TextInput
-              style={styles.input}
-              value={guess}
-              onChangeText={setGuess}
-              onSubmitEditing={submitGuess}
-              placeholder="Enter country name"
-              placeholderTextColor="#888"
-            />
-            <TouchableOpacity style={styles.button} onPress={submitGuess}>
-              <Text style={styles.buttonText}>Submit Guess</Text>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>GeoGuess</Text>
+          {loading && <Text style={{color: '#FFF'}}>Loading...</Text>}
+          {imageUrl && (
+            <TouchableOpacity 
+              style={styles.imageContainer}
+              onPress={() => setZoomImage(true)}
+            >
+              <Image 
+                source={{ uri: imageUrl ?? undefined }} 
+                style={styles.image} 
+                resizeMode="cover"
+              />
             </TouchableOpacity>
-          </>
-        )}
-        {feedback && (
-          <Text style={[
-            styles.feedback, 
-            feedback.includes('✅') ? {color: '#4CAF50'} : {color: '#FF6B6B'}
-          ]}>
-            {feedback}
-          </Text>
-        )}
-        {incorrectGuesses.length > 0 && (
-          <View style={{width: '80%'}}>
-            <Text style={styles.incorrectTitle}>Previous Guesses:</Text>
-            {incorrectGuesses.map((g: string, i: number) => (
-              <Text key={i} style={styles.incorrect}>• {g}</Text>
-            ))}
-          </View>
-        )}
-        {gameOver && (
-          <TouchableOpacity style={styles.buttonNext} onPress={startGame}>
-            <Text style={styles.buttonText}>Next Game</Text>
-          </TouchableOpacity>
-        )}
-          <View style={styles.footer} />
+          )}
+          {!gameOver && imageUrl && (
+            <>
+              <Text style={styles.prompt}>Guess the country! (Guess {guessCount + 1}/3)</Text>
+              <TextInput
+                style={styles.input}
+                value={guess}
+                onChangeText={setGuess}
+                onSubmitEditing={submitGuess}
+                placeholder="Enter country name"
+                placeholderTextColor="#888"
+              />
+              <TouchableOpacity style={styles.button} onPress={submitGuess}>
+                <Text style={styles.buttonText}>Submit Guess</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          {feedback && (
+            <Text style={[
+              styles.feedback, 
+              feedback.includes('✅') ? {color: '#4CAF50'} : {color: '#FF6B6B'}
+            ]}>
+              {feedback}
+            </Text>
+          )}
+          {incorrectGuesses.length > 0 && (
+            <View style={{width: '80%'}}>
+              <Text style={styles.incorrectTitle}>Previous Guesses:</Text>
+              {incorrectGuesses.map((g: string, i: number) => (
+                <Text key={i} style={styles.incorrect}>• {g}</Text>
+              ))}
+            </View>
+          )}
+          {gameOver && (
+            <TouchableOpacity style={styles.buttonNext} onPress={startGame}>
+              <Text style={styles.buttonText}>Next Game</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
 
         <Modal 
@@ -383,14 +369,14 @@ const App: React.FC = () => {
             saveToLocalByLongPress={false}
           />
         </Modal>
-        
-        <Text style={styles.attribution}>Images provided via Mapillary</Text>
-        <View style={styles.scoreContainer}>
-          <Text style={styles.scoreText}>High Score: {highScore}</Text>
-          <Text style={styles.scoreText}>Score: {currentScore}</Text>
-        </View>
       </SafeAreaView>
-    </KeyboardAvoidingView>
+      
+      <Text style={styles.attribution}>Images provided via Mapillary</Text>
+      <View style={styles.scoreContainer}>
+        <Text style={styles.scoreText}>High Score: {highScore}</Text>
+        <Text style={styles.scoreText}>Score: {currentScore}</Text>
+      </View>
+    </View>
   );
 };
 
