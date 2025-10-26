@@ -4,7 +4,6 @@ import {
   Text,
   Image,
   TextInput,
-  Button,
   Alert,
   StyleSheet,
   SafeAreaView,
@@ -13,7 +12,6 @@ import {
   Modal,
   Dimensions,
   BackHandler,
-  TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -163,11 +161,7 @@ const App: React.FC = () => {
     setGuess('');
   };
 
-  const handleKeyPress = (e: any) => {
-    if (e.nativeEvent.key === 'Enter') {
-      submitGuess();
-    }
-  };
+
 
   const styles = StyleSheet.create({
     container: {
@@ -195,11 +189,7 @@ const App: React.FC = () => {
       height: 200,
       borderRadius: 8,
     },
-    zoomedImage: {
-      width: screenWidth - 40,
-      height: screenWidth - 40,
-      borderRadius: 8,
-    },
+
     prompt: {
       fontSize: 18,
       marginBottom: 10,
@@ -256,24 +246,7 @@ const App: React.FC = () => {
       fontSize: 14,
       color: '#FF6B6B',
     },
-    modalContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.9)',
-    },
-    closeButton: {
-      position: 'absolute',
-      top: 40,
-      right: 20,
-      backgroundColor: '#333',
-      borderRadius: 20,
-      padding: 10,
-    },
-    closeButtonText: {
-      color: '#FFF',
-      fontSize: 16,
-    },
+
     scoreContainer: {
       width: '100%',
       position: 'absolute',
