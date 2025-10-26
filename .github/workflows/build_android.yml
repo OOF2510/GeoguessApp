@@ -1,51 +1,28 @@
-name: Android Build
-
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   android:
     name: Android Build
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.19.4'
-          cache: 'npm'
-
+      - name: Checkout Repository
+        uses: actions/checkout@v4      
       - name: Install Dependencies
-        run: |
-          npm install
-          cd android
-
-      - name: Setup Android
-        uses: android-actions/setup-android@v3
-        with:
-          ndk-version: '25.2.9519653'
-          sdk-version: 'commandlinetools-latest'
-
-      - name: Build APK
+        run: npm ci      
+      - name: Setup Java & Android SDK
+        uses: android-actions/setup-android@v3      
+      - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleRelease --stacktrace --no-daemon
-
-      - name: Upload Artifact
+          ./gradlew assembleRelease      
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: |
-            android/app/build/outputs/apk/release/*.apk
+          name: app-release.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
