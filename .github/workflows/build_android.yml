@@ -1,32 +1,51 @@
+name: Android Build
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   android:
     name: Android Build
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v6.0.0
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
         with:
-          cache: npm
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
       - name: Install Dependencies
-        run: npm install      
-      - name: Setup Java & Android SDK
-        uses: android-actions/setup-android@v3      
-      - name: Build Android APK
+        run: |
+          npm install
+          cd android && ./gradlew dependencies
+
+      - name: Setup Android
+        uses: android-actions/setup-android@v3
+        with:
+          ndk-version: '25.2.9519653'
+          sdk-version: 'commandlinetools-latest'
+
+      - name: Build APK
         run: |
           cd android
-          ./gradlew assembleRelease      
-      - name: Upload APK Artifact
+          ./gradlew assembleRelease --stacktrace --no-daemon
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release.apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: app-release
+          path: |
+            android/app/build/outputs/apk/release/*.apk

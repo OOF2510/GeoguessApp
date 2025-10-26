@@ -27,6 +27,7 @@ interface PrefetchedRound {
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [country, setCountry] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -59,6 +60,7 @@ const App: React.FC = () => {
     const hasPrefetched: boolean = nextRound !== null;
     if (!hasPrefetched) {
       setLoading(true);
+      setApiError(null);
     }
     setImageUrl(null);
     setCountry(null);
@@ -70,7 +72,6 @@ const App: React.FC = () => {
     setFeedback('');
     setGameOver(false);
 
-
     try {
       let roundData: PrefetchedRound | null = nextRound;
       if (roundData) {
@@ -78,20 +79,14 @@ const App: React.FC = () => {
       } else {
         const img: ImageResult | null = await getRandomImage();
         if (!img) {
-          Alert.alert('Error', 'Could not fetch an image. Try again.');
-          if (!hasPrefetched) {
-            setLoading(false);
-          }
+          setApiError('Failed to load game data. Check connection.');
           return;
         }
         roundData = { image: img };
       }
 
       if (!roundData) {
-        Alert.alert('Error', 'Could not fetch an image. Try again.');
-        if (!hasPrefetched) {
-          setLoading(false);
-        }
+        setApiError('Failed to load game data. Check connection.');
         return;
       }
 
@@ -103,10 +98,11 @@ const App: React.FC = () => {
 
       prefetchNextRound();
     } catch (e) {
+      setApiError('Network error. Please try again.');
       console.error(e);
-      Alert.alert('Error', 'Failed to start game.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const submitGuess = (): void => {
@@ -272,6 +268,12 @@ const App: React.FC = () => {
       color: '#FFFFFF',
       fontSize: 16,
     },
+    errorText: {
+      fontSize: 16,
+      marginVertical: 15,
+      textAlign: 'center',
+      color: '#FF6B6B',
+    },
   });
 
   useEffect(() => {
@@ -291,11 +293,12 @@ const App: React.FC = () => {
     const loadHighScore = async () => {
       try {
         const stored = await AsyncStorage.getItem('highScore');
-        if (stored) {
-          setHighScore(parseInt(stored));
+        const score = parseInt(stored || '0');
+        if (!isNaN(score)) {
+          setHighScore(score);
         }
       } catch (e) {
-        console.error(e);
+        console.error('Storage read error:', e);
       }
     };
     loadHighScore();
@@ -310,15 +313,17 @@ const App: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.title}>GeoGuess</Text>
         {loading && <Text style={{color: '#FFF'}}>Loading...</Text>}
+        {apiError && <Text style={styles.errorText}>{apiError}</Text>}
         {imageUrl && (
           <TouchableOpacity 
             style={styles.imageContainer}
             onPress={() => setZoomImage(true)}
           >
             <Image 
-              source={{ uri: imageUrl ?? undefined }} 
-              style={styles.image} 
-              resizeMode="cover"
+              source={{ uri: imageUrl || 'placeholder_uri' }} 
+              style={styles.image}
+              defaultSource={require('./assets/placeholder.png')}
+              onError={() => setImageUrl(null)}
             />
           </TouchableOpacity>
         )}

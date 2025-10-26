@@ -11,10 +11,19 @@ interface ImageResult {
 
 async function getRandomImage(): Promise<ImageResult | null> {
   try {
-    const response = await axios.get('https://geo.api.oof2510.space/getImage');
+    const response = await axios.get('https://geo.api.oof2510.space/getImage', {
+      timeout: 15000
+    });
 
-    if (!response.data || !response.data.imageUrl || !response.data.coordinates) {
-      console.error('Invalid response from API:', response.data);
+    if (!response?.data?.imageUrl || typeof response.data.imageUrl !== 'string') {
+      console.error('Invalid image URL');
+      return null;
+    }
+
+    if (!response.data.coordinates || 
+        typeof response.data.coordinates.lat !== 'number' || 
+        typeof response.data.coordinates.lon !== 'number') {
+      console.error('Invalid coordinates');
       return null;
     }
 
@@ -27,7 +36,7 @@ async function getRandomImage(): Promise<ImageResult | null> {
       countryName: response.data.countryName || 'Unknown'
     };
   } catch (error) {
-    console.error('Error fetching image from API:', error);
+    console.error('API request failed:', error);
     return null;
   }
 }
@@ -81,4 +90,3 @@ export {
 export type {
   ImageResult,
 };
-
