@@ -1,4 +1,4 @@
-package com.geoguessrapp
+package com.geoguess
 
 import android.app.Application
 import com.facebook.react.PackageList
