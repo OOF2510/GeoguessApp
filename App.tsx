@@ -139,8 +139,22 @@ const App: React.FC = () => {
     if (isCorrect) {
       setFeedback(`✅ Correct! It was ${displayName}`);
       setGameOver(true);
-      const newScore = currentScore + 1;
+      
+      // Award points based on number of guesses used
+      let pointsEarned: number;
+      if (newGuessCount === 1) {
+        pointsEarned = 3;
+      } else if (newGuessCount === 2) {
+        pointsEarned = 2;
+      } else if (newGuessCount === 3) {
+        pointsEarned = 1;
+      } else {
+        pointsEarned = 0;
+      }
+      
+      const newScore = currentScore + pointsEarned;
       setCurrentScore(newScore);
+      
       if (newScore > highScore) {
         setHighScore(newScore);
         AsyncStorage.setItem('highScore', newScore.toString());
@@ -152,6 +166,9 @@ const App: React.FC = () => {
         const coordStr: string = coord ? `(${coord.lat.toFixed(4)}, ${coord.lon.toFixed(4)})` : '';
         setFeedback(`❌ Game over! It was ${displayName}${coordStr ? ' ' + coordStr : ''}`);
         setGameOver(true);
+        
+        // Reset score when player fails after using all 3 guesses
+        setCurrentScore(0);
       } else {
         setFeedback(`❌ Not quite. Try again! (Guess ${newGuessCount}/3)`);
       }
