@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,21 @@ import {
   StyleSheet,
   SafeAreaView,
   Dimensions,
+  Animated
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from './navigationTypes';
 
 const { width: screenWidth } = Dimensions.get('window');
+const backgroundImages = Array.from(
+  { length: 11 }, (_, i) => require(`./assets/bg${i + 1}.jpg`)
+);
 
 const MainMenu: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
 
+  const [index, setIndex] = useState(0);
+  const slideAnim = useRef(new Animated.Value(0)).current;
   const handleStartGame = () => {
     navigation.navigate('Game');
   };
@@ -25,19 +31,54 @@ const MainMenu: React.FC = () => {
     console.log('Leaderboard button pressed');
   };
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.sequence([
+        Animated.timing(slideAnim, {
+          toValue: -screenWidth,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      setIndex(prev => (prev + 1) % backgroundImages.length);
+    }, 7000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.slideshowContainer}>
+        <Animated.Image
+          source={backgroundImages[index]}
+          style={[styles.slideshowImage, { transform: [{ translateX: slideAnim }] }]}
+          resizeMode="cover"
+        />
+        <Animated.Image
+          source={backgroundImages[(index + 1) % backgroundImages.length]}
+          style={[
+            styles.slideshowImage,
+            {
+              position: 'absolute',
+              transform: [{ translateX: slideAnim.interpolate({
+                inputRange: [-screenWidth, 0],
+                outputRange: [0, screenWidth],
+              }) }],
+            },
+          ]}
+          resizeMode="cover"
+        />
+      </View>
       <View style={styles.content}>
         <Text style={styles.title}>GeoGuess</Text>
-        <Image
-          source={require('./assets/earth.jpg')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
         <TouchableOpacity style={styles.button} onPress={handleStartGame}>
           <Text style={styles.buttonText}>Start Game</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleLeaderboard}>
+        <TouchableOpacity style={styles.leaderboardButton} onPress={handleLeaderboard}>
           <Text style={styles.buttonText}>Leaderboard</Text>
         </TouchableOpacity>
       </View>
@@ -48,7 +89,14 @@ const MainMenu: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+  },
+  slideshowContainer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  slideshowImage: {
+    width: '100%',
+    height: '100%',
   },
   content: {
     flex: 1,
@@ -61,11 +109,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 40,
     color: '#FFFFFF',
-  },
-  logo: {
-    width: screenWidth * 0.8,
-    height: screenWidth * 0.4,
-    marginBottom: 40,
   },
   button: {
     width: '80%',
@@ -80,6 +123,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  leaderboardButton: {
+    width: '80%',
+    marginBottom: 15,
+    borderRadius: 25,
+    backgroundColor: '#2125f38e',
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
