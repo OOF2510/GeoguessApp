@@ -49,6 +49,12 @@ jobs:
           APKSIGNER_PATH="$ANDROID_HOME/build-tools/$LATEST_BUILD_TOOLS_VERSION/apksigner"
           $APKSIGNER_PATH verify --verbose android/app/build/outputs/apk/release/app-release.apk
 
+      - name: Display Signing Certificate Information
+        run: |
+          LATEST_BUILD_TOOLS_VERSION=$(ls "$ANDROID_HOME/build-tools" | sort -r | head -n 1)
+          APKSIGNER_PATH="$ANDROID_HOME/build-tools/$LATEST_BUILD_TOOLS_VERSION/apksigner"
+          $APKSIGNER_PATH verify --print-certs -v android/app/build/outputs/apk/release/app-release.apk
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
