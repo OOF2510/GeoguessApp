@@ -43,6 +43,10 @@ jobs:
         run: |
           cd android
           ./gradlew assembleRelease
+      - name: Verify APK Signing
+        run: |
+          cd android
+          apksigner verify --verbose app/build/outputs/apk/release/app-release.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
