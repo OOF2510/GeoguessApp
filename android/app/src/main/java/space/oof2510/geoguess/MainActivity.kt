@@ -1,4 +1,4 @@
-package com.geoguess
+package space.oof2510.geoguess
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

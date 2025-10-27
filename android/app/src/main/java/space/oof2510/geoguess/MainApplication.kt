@@ -1,4 +1,4 @@
-package com.geoguess
+package space.oof2510.geoguess
 
 import android.app.Application
 import com.facebook.react.PackageList
