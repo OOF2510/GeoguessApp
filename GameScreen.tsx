@@ -357,6 +357,7 @@ const GameScreen: React.FC = () => {
     buttonContainer: {
       width: '100%',
       marginTop: 10,
+      alignItems: 'center',
     },
   });
 
