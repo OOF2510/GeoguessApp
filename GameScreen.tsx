@@ -10,7 +10,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
-  Dimensions,
   BackHandler,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,8 +20,8 @@ import {
   normalizeCountry,
   matchGuess,
 } from './geoApiUtils';
+import { startGameSession, submitScore } from './leaderAuthUtils';
 import ImageViewer from 'react-native-image-zoom-viewer';
-const { width: screenWidth } = Dimensions.get('window');
 
 interface ImageResult {
   url: string;
@@ -66,6 +65,7 @@ const GameScreen: React.FC = () => {
   const [roundNumber, setRoundNumber] = useState<number>(1);
   const [correctAnswers, setCorrectAnswers] = useState<number>(0);
   const [showGameSummary, setShowGameSummary] = useState<boolean>(false);
+  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
 
   const prefetchNextRound = async (): Promise<void> => {
     const requestId: number = ++prefetchIdRef.current;
@@ -204,17 +204,46 @@ const GameScreen: React.FC = () => {
     }
   };
 
-  const startNewGame = (): void => {
-    setRoundNumber(1);
-    setCorrectAnswers(0);
-    setShowGameSummary(false);
-    startGame();
-  };
-
   const continueGame = (): void => {
     setRoundNumber(1);
+    setCorrectAnswers(0);
+    setCurrentScore(0);
     setShowGameSummary(false);
-    startGame();
+    initializeGameSession();
+  };
+
+  const initializeGameSession = async (): Promise<void> => {
+    try {
+      const session = await startGameSession();
+      setGameSessionId(session.gameSessionId);
+      console.log('Game session started:', session.gameSessionId);
+      startGame();
+    } catch (error) {
+      console.error('Error starting game session:', error);
+      Alert.alert(
+        'Warning',
+        'Could not start game session. Playing in offline mode.',
+      );
+      startGame();
+    }
+  };
+
+  const handleReturnToMainMenu = async (): Promise<void> => {
+    if (gameSessionId && currentScore > 0) {
+      try {
+        await submitScore(gameSessionId, currentScore, {
+          correctAnswers,
+          totalRounds: TOTAL_ROUNDS,
+          roundsPlayed: roundNumber,
+        });
+        console.log('Score submitted successfully');
+      } catch (error) {
+        console.error('Error submitting score:', error);
+        Alert.alert('Warning', 'Could not submit score to leaderboard.');
+      }
+    }
+    setShowGameSummary(false);
+    navigation.navigate('MainMenu');
   };
 
   const styles = StyleSheet.create({
@@ -382,7 +411,7 @@ const GameScreen: React.FC = () => {
       try {
         const stored = await AsyncStorage.getItem('highScore');
         if (stored) {
-          setHighScore(parseInt(stored));
+          setHighScore(parseInt(stored, 10)); // force base 10
         }
       } catch (e) {
         console.error(e);
@@ -392,7 +421,8 @@ const GameScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    startGame();
+    initializeGameSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -502,18 +532,17 @@ const GameScreen: React.FC = () => {
                 Final Score: {currentScore}
               </Text>
               {currentScore > highScore && (
-                <Text style={gameSummaryStyles.highScoreText}>New High Score! 🎉</Text>
+                <Text style={gameSummaryStyles.highScoreText}>
+                  New High Score! 🎉
+                </Text>
               )}
               <View style={gameSummaryStyles.buttonContainer}>
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={continueGame}
-                >
+                <TouchableOpacity style={styles.button} onPress={continueGame}>
                   <Text style={styles.buttonText}>Play Again (10 more)</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, { backgroundColor: '#F44336' }]}
-                  onPress={() => navigation.navigate('MainMenu')}
+                  onPress={handleReturnToMainMenu}
                 >
                   <Text style={styles.buttonText}>Main Menu</Text>
                 </TouchableOpacity>

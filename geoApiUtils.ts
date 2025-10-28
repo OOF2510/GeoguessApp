@@ -23,12 +23,18 @@ interface ApiResponse {
   countryName: string;
 }
 
-async function getImageWithCountry(): Promise<{ image: ImageResult; countryInfo: CountryInfo | null } | null> {
+async function getImageWithCountry(): Promise<{
+  image: ImageResult;
+  countryInfo: CountryInfo | null;
+} | null> {
   try {
-    const response = await axios.get<ApiResponse>('https://geo.api.oof2510.space/getImage', {
-      timeout: 15000,
-      headers: { 'User-Agent': 'geoguessr-app/1.0' },
-    });
+    const response = await axios.get<ApiResponse>(
+      'https://geo.api.oof2510.space/getImage',
+      {
+        timeout: 15000,
+        headers: { 'User-Agent': 'geoguessr-app/1.0' },
+      },
+    );
 
     const data = response.data;
     if (!data || !data.imageUrl || !data.coordinates) {
@@ -68,12 +74,18 @@ function normalizeCountry(text: string): string {
     .trim();
 }
 
-function matchGuess(guess: string, country: string | null, code: string | null): boolean {
+function matchGuess(
+  guess: string,
+  country: string | null,
+  code: string | null,
+): boolean {
   if (!guess) return false;
   if (code && (guess === code || guess === code.toLowerCase())) return true;
   if (!country) return false;
   const aliases = countryAliases(country, code);
-  return aliases.some((alias: string) => guess === alias || guess.includes(alias));
+  return aliases.some(
+    (alias: string) => guess === alias || guess.includes(alias),
+  );
 }
 
 function countryAliases(country: string | null, code: string | null): string[] {
@@ -122,20 +134,15 @@ function countryAliases(country: string | null, code: string | null): string[] {
   }
   if (
     c.includes('ivory coast') ||
-    c.includes('côte d\'ivoire') ||
+    c.includes("côte d'ivoire") ||
     c.includes('cote divoire')
   ) {
     base.add('cote divoire');
-    base.add('cote d\'ivoire');
+    base.add("cote d'ivoire");
     base.add('ivory coast');
   }
 
   return Array.from(base);
 }
 
-export {
-  getImageWithCountry,
-  normalizeCountry,
-  matchGuess,
-  countryAliases,
-};
+export { getImageWithCountry, normalizeCountry, matchGuess, countryAliases };

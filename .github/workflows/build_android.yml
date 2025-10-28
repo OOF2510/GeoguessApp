@@ -14,6 +14,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Get Firebase JSON
+        run: |
+          echo "${{ secrets.FIREBASE_JSON }}" | base64 --decode > ./android/app/google-services.json
+
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
@@ -23,11 +27,35 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
+      - name: Metro Transform Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.metro-cache
+            node_modules/.cache/metro
+          key: ${{ runner.os }}-metro-${{ hashFiles('package-lock.json', 'yarn.lock', 'babel.config.js', 'metro.config.js') }}
+          restore-keys: |
+            ${{ runner.os }}-metro-
+
       - name: Install Dependencies
         run: npm ci
 
+      - name: Cache Android SDK & NDK
+        uses: actions/cache@v4
+        id: android-cache
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/platforms
+            ${{ env.ANDROID_HOME }}/build-tools
+            ${{ env.ANDROID_HOME }}/ndk
+            ${{ env.ANDROID_HOME }}/cmdline-tools
+          key: ${{ runner.os }}-android-sdk-ndk-${{ hashFiles('android/build.gradle', 'android/app/build.gradle', 'android/gradle.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-android-sdk-ndk-
+
       - name: Setup Java & Android SDK
         uses: android-actions/setup-android@v3
+        if: steps.android-cache.outputs.cache-hit != 'true'
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -35,9 +63,10 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'package-lock.json', 'yarn.lock') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/build.gradle', 'android/app/build.gradle', 'android/gradle.properties', 'android/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
+
 
       - name: Build Android APK
         run: |

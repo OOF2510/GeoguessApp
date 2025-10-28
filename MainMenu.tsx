@@ -9,10 +9,14 @@ import {
   Dimensions,
   // Animated,
   ImageSourcePropType,
+  Modal,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from './navigationTypes';
 import RNFS from 'react-native-fs';
+import { getLeaderboard } from './leaderAuthUtils';
 
 // const { width: screenWidth } = Dimensions.get('window');
 const backgroundImages: ImageSourcePropType[] = [
@@ -37,6 +41,15 @@ const MainMenu: React.FC = () => {
   // const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [cachedImages, setCachedImages] = useState<number[]>([]);
+  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
+  const [leaderboardData, setLeaderboardData] = useState<
+    Array<{
+      rank: number;
+      score: number;
+      createdAt: string;
+    }>
+  >([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
 
   // Preload images on component mount
   useEffect(() => {
@@ -124,8 +137,24 @@ const MainMenu: React.FC = () => {
     navigation.navigate('Game');
   };
 
-  const handleLeaderboard = () => {
-    console.log('Leaderboard button pressed');
+  const handleLeaderboard = async () => {
+    setShowLeaderboard(true);
+    setLoadingLeaderboard(true);
+    try {
+      const data = await getLeaderboard(50);
+      setLeaderboardData(data);
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+      // Still show the modal but with empty data
+      setLeaderboardData([]);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  const closeLeaderboard = () => {
+    setShowLeaderboard(false);
+    setLeaderboardData([]);
   };
 
   // const startTransition = () => {
@@ -229,6 +258,63 @@ const MainMenu: React.FC = () => {
           <Text style={styles.buttonText}>Leaderboard</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Leaderboard Modal */}
+      <Modal
+        visible={showLeaderboard}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closeLeaderboard}
+      >
+        <View style={leaderboardStyles.modalContainer}>
+          <View style={leaderboardStyles.leaderboardBox}>
+            <Text style={leaderboardStyles.leaderboardTitle}>Leaderboard</Text>
+
+            {loadingLeaderboard ? (
+              <View style={leaderboardStyles.loadingContainer}>
+                <ActivityIndicator size="large" color="#4CAF50" />
+                <Text style={leaderboardStyles.loadingText}>
+                  Loading scores...
+                </Text>
+              </View>
+            ) : leaderboardData.length > 0 ? (
+              <ScrollView style={leaderboardStyles.scrollContainer}>
+                {leaderboardData.map((entry, index) => (
+                  <View key={index} style={leaderboardStyles.leaderboardEntry}>
+                    <Text style={leaderboardStyles.rankText}>
+                      #{entry.rank}
+                    </Text>
+                    <Text style={leaderboardStyles.scoreText}>
+                      {entry.score} pts
+                    </Text>
+                    <Text style={leaderboardStyles.dateText}>
+                      {new Date(entry.createdAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={leaderboardStyles.emptyContainer}>
+                <Text style={leaderboardStyles.emptyText}>
+                  No scores available yet.
+                </Text>
+                <Text style={leaderboardStyles.emptySubText}>
+                  Be the first to play and set a high score!
+                </Text>
+              </View>
+            )}
+
+            <View style={leaderboardStyles.buttonContainer}>
+              <TouchableOpacity
+                style={leaderboardStyles.closeButton}
+                onPress={closeLeaderboard}
+              >
+                <Text style={leaderboardStyles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -261,19 +347,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: 'rgba(255,255,255,1)',
   },
   button: {
     width: '80%',
     marginBottom: 15,
     borderRadius: 25,
-    backgroundColor: '#4CAF508e',
+    backgroundColor: 'rgba(76,175,80,0.56)',
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: 'rgba(255,255,255,1)',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -281,10 +367,107 @@ const styles = StyleSheet.create({
     width: '80%',
     marginBottom: 15,
     borderRadius: 25,
-    backgroundColor: '#2125f38e',
+    backgroundColor: 'rgba(33,37,243,0.56)',
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+});
+
+const leaderboardStyles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
+  leaderboardBox: {
+    backgroundColor: 'rgba(30,30,30,1)',
+    padding: 20,
+    borderRadius: 10,
+    width: '90%',
+    maxHeight: '80%',
+    alignItems: 'center',
+  },
+  leaderboardTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'rgba(255, 215, 0, 1)',
+    marginBottom: 20,
+  },
+  scrollContainer: {
+    width: '100%',
+    maxHeight: 400,
+  },
+  leaderboardEntry: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    marginBottom: 8,
+    backgroundColor: 'rgba(42,42,42,1)',
+    borderRadius: 8,
+  },
+  rankText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'rgba(76,175,80,1)',
+    minWidth: 40,
+  },
+  scoreText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'rgba(255,255,255,1)',
+    flex: 1,
+    textAlign: 'center',
+  },
+  dateText: {
+    fontSize: 12,
+    color: 'rgba(136,136,136,1)',
+    minWidth: 80,
+    textAlign: 'right',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    color: 'rgba(255,255,255,1)',
+    fontSize: 16,
+    marginTop: 10,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,1)',
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  emptySubText: {
+    color: 'rgba(136,136,136,1)',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    width: '100%',
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  closeButton: {
+    width: '60%',
+    borderRadius: 25,
+    backgroundColor: 'rgba(231, 46, 46, 1)',
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    color: 'rgba(255,255,255,1)',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
