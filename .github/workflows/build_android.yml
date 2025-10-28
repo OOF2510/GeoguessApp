@@ -66,7 +66,26 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('android/build.gradle', 'android/app/build.gradle', 'android/gradle.properties', 'android/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
+            
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('android/build.gradle', 'android/app/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+            
+      - name: Cache Kotlin Compiler
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/kotlin-daemon-cache
+          key: ${{ runner.os }}-kotlin-${{ hashFiles('android/**/*.kt') }}
+          
+      - name: Cache R8 Build Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/build-cache
+          key: ${{ runner.os }}-r8-${{ hashFiles('android/app/build.gradle') }}
 
       - name: Build Android APK
         run: |
