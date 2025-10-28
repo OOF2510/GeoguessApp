@@ -7,15 +7,26 @@ import {
   StyleSheet,
   SafeAreaView,
   Dimensions,
-  Animated
+  Animated,
+  ImageSourcePropType,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from './navigationTypes';
 
 const { width: screenWidth } = Dimensions.get('window');
-const backgroundImages = Array.from(
-  { length: 11 }, (_, i) => require(`./assets/bg${i + 1}.jpg`)
-);
+const backgroundImages: ImageSourcePropType[] = [
+  require('./assets/bg1.jpg'),
+  require('./assets/bg2.jpg'),
+  require('./assets/bg3.jpg'),
+  require('./assets/bg4.jpg'),
+  require('./assets/bg5.jpg'),
+  require('./assets/bg6.jpg'),
+  require('./assets/bg7.jpg'),
+  require('./assets/bg8.jpg'),
+  require('./assets/bg9.jpg'),
+  require('./assets/bg10.jpg'),
+  require('./assets/bg11.jpg')
+];
 
 const MainMenu: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
