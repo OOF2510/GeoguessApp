@@ -5,6 +5,10 @@ on:
   pull_request:
     branches:
       - main
+  release:
+    types:
+      - published
+  workflow_dispatch:
 
 jobs:
   android:
@@ -27,22 +31,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
-      - name: Metro Transform Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.metro-cache
-            node_modules/.cache/metro
-          key: ${{ runner.os }}-metro-${{ hashFiles('package-lock.json', 'yarn.lock', 'babel.config.js', 'metro.config.js') }}
-          restore-keys: |
-            ${{ runner.os }}-metro-
-
       - name: Install Dependencies
         run: npm i
 
       - name: Setup Java & Android SDK
         uses: android-actions/setup-android@v3
-        if: steps.android-cache.outputs.cache-hit != 'true'
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -50,34 +43,31 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
+            ~/.gradle/daemon
           key: ${{ runner.os }}-gradle-${{ hashFiles('android/build.gradle', 'android/app/build.gradle', 'android/gradle.properties', 'android/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-            
-      - name: Cache Maven Dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('android/build.gradle', 'android/app/build.gradle') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-            
-      - name: Cache Kotlin Compiler
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/kotlin-daemon-cache
-          key: ${{ runner.os }}-kotlin-${{ hashFiles('android/**/*.kt') }}
-          
-      - name: Cache R8 Build Cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/build-cache
-          key: ${{ runner.os }}-r8-${{ hashFiles('android/app/build.gradle') }}
+
+      - name: Decode Release Keystore
+        run: |
+          echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 --decode > ./android/app/geoguess-release.keystore
+
+      - name: Set versionName and versionCode
+        if: github.event_name == 'release'
+        run: |
+          cd android
+          VERSION_NAME=${{ github.event.release.tag_name }}
+          VERSION_CODE=$(echo $VERSION_NAME | sed 's/[^0-9]//g')
+          ./gradlew setVersion -PversionName=$VERSION_NAME -PversionCode=$VERSION_CODE
 
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=app/geoguess-release.keystore \
+            -Pandroid.injected.signing.store.password=${{ secrets.RELEASE_STORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.RELEASE_KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.RELEASE_KEY_PASSWORD }}
+
       - name: Verify APK Signing
         run: |
           LATEST_BUILD_TOOLS_VERSION=$(ls "$ANDROID_HOME/build-tools" | sort -r | head -n 1)
@@ -95,3 +85,14 @@ jobs:
         with:
           name: app-release.apk
           path: android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload APK to GitHub Release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: android/app/build/outputs/apk/release/app-release.apk
+          asset_name: Geoguess-${{ github.event.release.tag_name }}.apk
+          asset_content_type: application/vnd.android.package-archive
