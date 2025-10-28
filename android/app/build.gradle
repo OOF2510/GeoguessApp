@@ -83,20 +83,8 @@ android {
         applicationId "space.oof2510.geoguess"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // Version code and name will be set by GitHub Actions
-        versionCode project.hasProperty('versionCode') ? versionCode.toInteger() : 1
-        versionName project.hasProperty('versionName') ? versionName : "1.0"
-    }
-
-    // Custom task to set versionName and versionCode
-    task setVersion(type: Exec) {
-        doLast {
-            def versionName = project.hasProperty('versionName') ? project.property('versionName') : "1.0"
-            def versionCode = project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 1
-
-            android.defaultConfig.versionName = versionName
-            android.defaultConfig.versionCode = versionCode
-        }
+        versionCode 1
+        versionName "1.0-beta"
     }
     signingConfigs {
         debug {

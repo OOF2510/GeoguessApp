@@ -51,18 +51,10 @@ jobs:
         run: |
           echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 --decode > ./android/app/geoguess-release.keystore
 
-      - name: Set versionName and versionCode
-        if: github.event_name == 'release'
-        run: |
-          cd android
-          VERSION_NAME=${{ github.event.release.tag_name }}
-          VERSION_CODE=$(echo $VERSION_NAME | sed 's/[^0-9]//g')
-          ./gradlew setVersion -PversionName=$VERSION_NAME -PversionCode=$VERSION_CODE
-
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=app/geoguess-release.keystore \
+          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=./app/geoguess-release.keystore \
             -Pandroid.injected.signing.store.password=${{ secrets.RELEASE_STORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.RELEASE_KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.RELEASE_KEY_PASSWORD }}
