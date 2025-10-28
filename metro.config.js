@@ -1,5 +1,4 @@
 const { getDefaultConfig } = require('@react-native/metro-config');
-const path = require('path');
 
 /**
  * Metro configuration
@@ -8,9 +7,4 @@ const path = require('path');
  * @type {import('@react-native/metro-config').MetroConfig}
  */
 
-const defaultConfig = getDefaultConfig(__dirname);
-defaultConfig.watchFolders = [path.resolve(__dirname, 'android/app/src/main/assets')];
-defaultConfig.resolver.cacheEnabled = true;
-defaultConfig.resolver.cacheDirectory = path.resolve(process.env.HOME, '.metro-cache');
-
-module.exports = defaultConfig;
+module.exports = getDefaultConfig(__dirname);
