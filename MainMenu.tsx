@@ -31,48 +31,81 @@ const backgroundImages: ImageSourcePropType[] = [
 const MainMenu: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
 
-  const [index, setIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [nextIndex, setNextIndex] = useState(1);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Preload images on component mount
+  useEffect(() => {
+    const preloadImages = async () => {
+      const preloadPromises = backgroundImages.map((imageSource) => {
+        return Image.prefetch(Image.resolveAssetSource(imageSource).uri);
+      });
+      await Promise.all(preloadPromises);
+      console.log('All background images preloaded');
+    };
+    
+    preloadImages();
+  }, []);
 
   const handleStartGame = () => {
     navigation.navigate('Game');
   };
 
   const handleLeaderboard = () => {
-    // Implement leaderboard navigation later
     console.log('Leaderboard button pressed');
+  };
+
+  const startTransition = () => {
+    if (isTransitioning) return;
+    
+    setIsTransitioning(true);
+    setNextIndex((currentIndex + 1) % backgroundImages.length);
+    
+    // Reset animation value and start transition
+    slideAnim.setValue(0);
+    
+    Animated.timing(slideAnim, {
+      toValue: -screenWidth,
+      duration: 1000, // 1 second transition
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        // Update current index and reset for next transition
+        setCurrentIndex(nextIndex);
+        setIsTransitioning(false);
+        slideAnim.setValue(0);
+      }
+    });
   };
 
   useEffect(() => {
     const interval = setInterval(() => {
-      Animated.timing(slideAnim, {
-        toValue: -screenWidth,
-        duration: 800,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) {
-          slideAnim.setValue(0);
-          setIndex(prev => (prev + 1) % backgroundImages.length);
-        }
-      });
-    }, 7000);
+      startTransition();
+    }, 7000); // 7 seconds per image
 
     return () => clearInterval(interval);
-  }, [slideAnim]);
+  }, [currentIndex, nextIndex, isTransitioning]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.slideshowContainer}>
+        {/* Current image */}
         <Animated.Image
-          source={backgroundImages[index]}
+          source={backgroundImages[currentIndex]}
           style={[
             styles.slideshowImage,
-            { transform: [{ translateX: slideAnim }] },
+            {
+              transform: [{ translateX: slideAnim }],
+            },
           ]}
           resizeMode="cover"
         />
+        
+        {/* Next image */}
         <Animated.Image
-          source={backgroundImages[(index + 1) % backgroundImages.length]}
+          source={backgroundImages[nextIndex]}
           style={[
             styles.slideshowImage,
             {
@@ -81,7 +114,7 @@ const MainMenu: React.FC = () => {
                 {
                   translateX: slideAnim.interpolate({
                     inputRange: [-screenWidth, 0],
-                    outputRange: [screenWidth, 0],
+                    outputRange: [0, screenWidth],
                   }),
                 },
               ],
@@ -90,6 +123,7 @@ const MainMenu: React.FC = () => {
           resizeMode="cover"
         />
       </View>
+      
       <View style={styles.content}>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>GeoGuess</Text>
