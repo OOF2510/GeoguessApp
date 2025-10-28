@@ -12,7 +12,7 @@ const initializeFirebase = () => {
         provider: 'playIntegrity',
       },
     });
-
+  }
 
   // Initialize App Check with the configured provider.
   appCheck().initializeAppCheck({
@@ -21,7 +21,5 @@ const initializeFirebase = () => {
   });
   console.log('Firebase App Check with Play Integrity initialized.');
 };
-}
 
 export { initializeFirebase };
-

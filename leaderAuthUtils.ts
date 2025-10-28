@@ -23,7 +23,7 @@ const getTokenExpiry = (token: string): number => {
 };
 
 // Initialize Firebase App Check
-const initAppCheck = async () => {
+export const initAppCheck = async () => {
   try {
     const appCheckTokenResult = await appCheck().getToken(true);
     if (appCheckTokenResult) {
