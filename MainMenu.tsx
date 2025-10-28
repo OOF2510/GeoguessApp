@@ -32,9 +32,8 @@ const MainMenu: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [nextIndex, setNextIndex] = useState(1);
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Preload images on component mount
   useEffect(() => {
@@ -58,10 +57,7 @@ const MainMenu: React.FC = () => {
   };
 
   const startTransition = () => {
-    if (isTransitioning) return;
-    
-    setIsTransitioning(true);
-    setNextIndex((currentIndex + 1) % backgroundImages.length);
+    const nextIndex = (currentIndex + 1) % backgroundImages.length;
     
     // Reset animation value and start transition
     slideAnim.setValue(0);
@@ -72,21 +68,32 @@ const MainMenu: React.FC = () => {
       useNativeDriver: true,
     }).start(({ finished }) => {
       if (finished) {
-        // Update current index and reset for next transition
+        // Update current index after animation completes
         setCurrentIndex(nextIndex);
-        setIsTransitioning(false);
         slideAnim.setValue(0);
       }
     });
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    
+    // Set up new interval
+    intervalRef.current = setInterval(() => {
       startTransition();
     }, 7000); // 7 seconds per image
 
-    return () => clearInterval(interval);
-  }, [currentIndex, nextIndex, isTransitioning]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [currentIndex]); // Only depend on currentIndex
+
+  const nextIndex = (currentIndex + 1) % backgroundImages.length;
 
   return (
     <SafeAreaView style={styles.container}>
