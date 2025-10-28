@@ -25,7 +25,7 @@ const backgroundImages: ImageSourcePropType[] = [
   require('./assets/bg8.jpg'),
   require('./assets/bg9.jpg'),
   require('./assets/bg10.jpg'),
-  require('./assets/bg11.jpg')
+  require('./assets/bg11.jpg'),
 ];
 
 const MainMenu: React.FC = () => {
@@ -33,6 +33,7 @@ const MainMenu: React.FC = () => {
 
   const [index, setIndex] = useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
+
   const handleStartGame = () => {
     navigation.navigate('Game');
   };
@@ -44,29 +45,30 @@ const MainMenu: React.FC = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      Animated.sequence([
-        Animated.timing(slideAnim, {
-          toValue: -screenWidth,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-      ]).start();
-      setIndex(prev => (prev + 1) % backgroundImages.length);
+      Animated.timing(slideAnim, {
+        toValue: -screenWidth,
+        duration: 800,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          slideAnim.setValue(0);
+          setIndex(prev => (prev + 1) % backgroundImages.length);
+        }
+      });
     }, 7000);
+
     return () => clearInterval(interval);
-  }, []);
+  }, [slideAnim]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.slideshowContainer}>
         <Animated.Image
           source={backgroundImages[index]}
-          style={[styles.slideshowImage, { transform: [{ translateX: slideAnim }] }]}
+          style={[
+            styles.slideshowImage,
+            { transform: [{ translateX: slideAnim }] },
+          ]}
           resizeMode="cover"
         />
         <Animated.Image
@@ -75,21 +77,30 @@ const MainMenu: React.FC = () => {
             styles.slideshowImage,
             {
               position: 'absolute',
-              transform: [{ translateX: slideAnim.interpolate({
-                inputRange: [-screenWidth, 0],
-                outputRange: [0, screenWidth],
-              }) }],
+              transform: [
+                {
+                  translateX: slideAnim.interpolate({
+                    inputRange: [-screenWidth, 0],
+                    outputRange: [screenWidth, 0],
+                  }),
+                },
+              ],
             },
           ]}
           resizeMode="cover"
         />
       </View>
       <View style={styles.content}>
-        <Text style={styles.title}>GeoGuess</Text>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>GeoGuess</Text>
+        </View>
         <TouchableOpacity style={styles.button} onPress={handleStartGame}>
           <Text style={styles.buttonText}>Start Game</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.leaderboardButton} onPress={handleLeaderboard}>
+        <TouchableOpacity
+          style={styles.leaderboardButton}
+          onPress={handleLeaderboard}
+        >
           <Text style={styles.buttonText}>Leaderboard</Text>
         </TouchableOpacity>
       </View>
@@ -115,17 +126,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  titleContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 15,
+    marginBottom: 40,
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 40,
     color: '#FFFFFF',
   },
   button: {
     width: '80%',
     marginBottom: 15,
     borderRadius: 25,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#4CAF508e',
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
