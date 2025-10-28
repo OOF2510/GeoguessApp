@@ -42,7 +42,6 @@ jobs:
 
       - name: Setup Java & Android SDK
         uses: android-actions/setup-android@v3
-        if: steps.android-cache.outputs.cache-hit != 'true'
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -50,10 +49,11 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
+            ~/.gradle/daemon
           key: ${{ runner.os }}-gradle-${{ hashFiles('android/build.gradle', 'android/app/build.gradle', 'android/gradle.properties', 'android/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-            
+
       - name: Cache Maven Dependencies
         uses: actions/cache@v4
         with:
@@ -61,18 +61,33 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('android/build.gradle', 'android/app/build.gradle') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-            
-      - name: Cache Kotlin Compiler
+
+      - name: Cache Android SDK
         uses: actions/cache@v4
         with:
-          path: ~/.gradle/kotlin-daemon-cache
-          key: ${{ runner.os }}-kotlin-${{ hashFiles('android/**/*.kt') }}
-          
-      - name: Cache R8 Build Cache
+          path: |
+            ~/.android
+            ~/.android/avd
+            ~/.android/cache
+          key: ${{ runner.os }}-android-sdk-${{ hashFiles('android/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-android-sdk-
+
+      - name: Cache Android NDK
         uses: actions/cache@v4
         with:
-          path: ~/.gradle/build-cache
-          key: ${{ runner.os }}-r8-${{ hashFiles('android/app/build.gradle') }}
+          path: ~/.android/ndk
+          key: ${{ runner.os }}-android-ndk-${{ hashFiles('android/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-android-ndk-
+
+      - name: Cache Android Build Tools
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/build-tools
+          key: ${{ runner.os }}-android-build-tools-${{ hashFiles('android/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-android-build-tools-
 
       - name: Build Android APK
         run: |
