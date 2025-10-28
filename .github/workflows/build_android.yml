@@ -55,6 +55,7 @@ jobs:
             ~/.gradle/wrapper
             ~/.gradle/daemon
             ~/.gradle/build-cache
+            ~/.gradle/configuration-cache
           key: ${{ runner.os }}-gradle-${{ hashFiles('android/build.gradle', 'android/app/build.gradle', 'android/gradle.properties', 'android/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
@@ -67,6 +68,8 @@ jobs:
             android/app/build/intermediates
             android/app/build/generated
             android/app/build/tmp
+            android/app/.cxx
+            android/build
           key: ${{ runner.os }}-android-build-${{ hashFiles('android/**/*.gradle*', 'android/**/*.properties', '**/*.js', '**/*.json') }}
           restore-keys: |
             ${{ runner.os }}-android-build-
