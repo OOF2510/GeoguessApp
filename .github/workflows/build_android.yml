@@ -36,6 +36,17 @@ jobs:
       - name: Setup Java & Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Cache NDK and specific build-tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/ndk/27.1.12297006
+            ${{ env.ANDROID_HOME }}/build-tools/36.0.0
+            ${{ env.ANDROID_HOME }}/cmake
+          key: ${{ runner.os }}-android-ndk-bt-${{ hashFiles('android/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-android-ndk-bt-
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -43,25 +54,38 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
             ~/.gradle/daemon
+            ~/.gradle/build-cache
           key: ${{ runner.os }}-gradle-${{ hashFiles('android/build.gradle', 'android/app/build.gradle', 'android/gradle.properties', 'android/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
+
+      - name: Cache Android build outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            android/.gradle
+            android/app/build/intermediates
+            android/app/build/generated
+            android/app/build/tmp
+          key: ${{ runner.os }}-android-build-${{ hashFiles('android/**/*.gradle*', 'android/**/*.properties', '**/*.js', '**/*.json') }}
+          restore-keys: |
+            ${{ runner.os }}-android-build-
 
       - name: Decode Release Keystore
         run: |
           # Remove newlines from base64 string and decode
           echo "${{ secrets.RELEASE_KEYSTORE }}" | tr -d '\n\r' | base64 --decode > ./android/app/geoguess-release.keystore
-          
+
           # Verify the keystore file was created and has content
           if [ ! -f "./android/app/geoguess-release.keystore" ]; then
             echo "Error: Keystore file was not created!"
             exit 1
           fi
-          
+
           # Check file size
           FILE_SIZE=$(stat -c%s "./android/app/geoguess-release.keystore")
           echo "Keystore file size: $FILE_SIZE bytes"
-          
+
           if [ "$FILE_SIZE" -eq 0 ]; then
             echo "Error: Keystore file is empty!"
             exit 1
