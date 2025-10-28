@@ -40,19 +40,6 @@ jobs:
       - name: Install Dependencies
         run: npm i
 
-      - name: Cache Android SDK & NDK
-        uses: actions/cache@v4
-        id: android-cache
-        with:
-          path: |
-            ${{ env.ANDROID_HOME }}/platforms
-            ${{ env.ANDROID_HOME }}/build-tools
-            ${{ env.ANDROID_HOME }}/ndk
-            ${{ env.ANDROID_HOME }}/cmdline-tools
-          key: ${{ runner.os }}-android-sdk-ndk-${{ hashFiles('android/build.gradle', 'android/app/build.gradle', 'android/gradle.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-android-sdk-ndk-
-
       - name: Setup Java & Android SDK
         uses: android-actions/setup-android@v3
         if: steps.android-cache.outputs.cache-hit != 'true'
