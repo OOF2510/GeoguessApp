@@ -33,6 +33,7 @@ const MainMenu: React.FC = () => {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const nextSlideAnim = useRef(new Animated.Value(screenWidth)).current;
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Preload images on component mount
@@ -58,19 +59,30 @@ const MainMenu: React.FC = () => {
 
   const startTransition = () => {
     const nextIndex = (currentIndex + 1) % backgroundImages.length;
-    
-    // Reset animation value and start transition
+
+    // Reset animation values
     slideAnim.setValue(0);
-    
-    Animated.timing(slideAnim, {
-      toValue: -screenWidth,
-      duration: 1000, // 1 second transition
-      useNativeDriver: true,
-    }).start(({ finished }) => {
+    nextSlideAnim.setValue(screenWidth);
+
+    Animated.parallel([
+      // Current image slides left
+      Animated.timing(slideAnim, {
+        toValue: -screenWidth,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      // Next image slides in from right with slight delay
+      Animated.timing(nextSlideAnim, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+        delay: 100, // Slight delay for smoother transition
+      }),
+    ]).start(({ finished }) => {
       if (finished) {
-        // Update current index after animation completes
         setCurrentIndex(nextIndex);
         slideAnim.setValue(0);
+        nextSlideAnim.setValue(screenWidth);
       }
     });
   };
@@ -110,7 +122,7 @@ const MainMenu: React.FC = () => {
           ]}
           resizeMode="cover"
         />
-        
+
         {/* Next image */}
         <Animated.Image
           key={nextIndex}
@@ -121,10 +133,7 @@ const MainMenu: React.FC = () => {
               position: 'absolute',
               transform: [
                 {
-                  translateX: slideAnim.interpolate({
-                    inputRange: [-screenWidth, 0],
-                    outputRange: [0, screenWidth],
-                  }),
+                  translateX: nextSlideAnim,
                 },
               ],
             },
