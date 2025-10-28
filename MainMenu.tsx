@@ -59,13 +59,24 @@ const MainMenu: React.FC = () => {
       const filePath = `${RNFS.CachesDirectoryPath}/lastUsedImages.json`;
       const exists = await RNFS.exists(filePath);
 
+      let cached: number[] = [];
       if (exists) {
         const content = await RNFS.readFile(filePath, 'utf8');
-        const cached = JSON.parse(content);
+        cached = JSON.parse(content);
         setCachedImages(cached);
+      } else {
+        // ensure state is initialized
+        setCachedImages([]);
       }
+
+      // After loading the cache (or defaulting), pick a single random background once
+      const initialIndex = getRandomBackgroundImage(cached);
+      setCurrentIndex(initialIndex);
     } catch (error) {
       console.error('Error loading cached images:', error);
+      // Fallback: pick a random image based on current (possibly empty) cache state
+      const initialIndex = getRandomBackgroundImage();
+      setCurrentIndex(initialIndex);
     }
   };
 
@@ -78,30 +89,35 @@ const MainMenu: React.FC = () => {
     }
   };
 
-  const getRandomBackgroundImage = () => {
-    // Filter out the last 4 used images
-    const availableImages = backgroundImages.filter(
-      (_, index) => !cachedImages.includes(index),
-    );
+  const getRandomBackgroundImage = (cachedArray?: number[]) => {
+    // Use the passed cache if provided (so we can pick immediately after reading file),
+    // otherwise fall back to the cachedImages state.
+    const cache = Array.isArray(cachedArray) ? cachedArray : cachedImages;
 
-    // If we've used all images recently, reset the cache
-    if (availableImages.length === 0) {
-      setCachedImages([]);
-      return Math.floor(Math.random() * backgroundImages.length);
+    // Build list of available indices excluding the recent cache
+    const availableIndices = backgroundImages
+      .map((_, i) => i)
+      .filter(i => !cache.includes(i));
+
+    // If all images were recently used, reset and pick any random one
+    if (availableIndices.length === 0) {
+      const idx = Math.floor(Math.random() * backgroundImages.length);
+      const newCache = [idx].slice(-4);
+      setCachedImages(newCache);
+      saveCachedImages(newCache);
+      return idx;
     }
 
-    // Choose a random image from available ones
-    const randomIndex = Math.floor(Math.random() * availableImages.length);
-    const selectedImageIndex = backgroundImages.indexOf(
-      availableImages[randomIndex],
-    );
+    // Choose a random index from the available ones
+    const selectedIndex =
+      availableIndices[Math.floor(Math.random() * availableIndices.length)];
 
-    // Update cache with new image
-    const newCache = [...cachedImages, selectedImageIndex].slice(-4);
+    // Update cache with the selected image (keep last 4)
+    const newCache = [...cache, selectedIndex].slice(-4);
     setCachedImages(newCache);
     saveCachedImages(newCache);
 
-    return selectedImageIndex;
+    return selectedIndex;
   };
 
   const handleStartGame = () => {
@@ -149,11 +165,9 @@ const MainMenu: React.FC = () => {
   //   };
   // }, [currentIndex]); // Only depend on currentIndex
 
-  useEffect(() => {
-    // Initialize with a random background
-    const initialIndex = getRandomBackgroundImage();
-    setCurrentIndex(initialIndex);
-  }, [getRandomBackgroundImage]);
+  {
+    /* Initialization is now handled after cache load inside loadCachedImages */
+  }
 
   // const nextIndex = (currentIndex + 1) % backgroundImages.length;
 
