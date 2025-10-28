@@ -100,6 +100,7 @@ const MainMenu: React.FC = () => {
       <View style={styles.slideshowContainer}>
         {/* Current image */}
         <Animated.Image
+          key={currentIndex}
           source={backgroundImages[currentIndex]}
           style={[
             styles.slideshowImage,
@@ -112,6 +113,7 @@ const MainMenu: React.FC = () => {
         
         {/* Next image */}
         <Animated.Image
+          key={nextIndex}
           source={backgroundImages[nextIndex]}
           style={[
             styles.slideshowImage,
