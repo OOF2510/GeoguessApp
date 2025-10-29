@@ -116,9 +116,6 @@ const GameScreen: React.FC = () => {
         const result = await getImageWithCountry();
         if (!result) {
           Alert.alert('Error', 'Could not fetch an image. Try again.');
-          if (!hasPrefetched) {
-            setLoading(false);
-          }
           return;
         }
         roundData = { image: result.image, countryInfo: result.countryInfo };
@@ -126,9 +123,6 @@ const GameScreen: React.FC = () => {
 
       if (!roundData) {
         Alert.alert('Error', 'Could not fetch an image. Try again.');
-        if (!hasPrefetched) {
-          setLoading(false);
-        }
         return;
       }
 
@@ -147,8 +141,9 @@ const GameScreen: React.FC = () => {
     } catch (e) {
       console.error(e);
       Alert.alert('Error', 'Failed to start game.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const submitGuess = (): void => {
@@ -243,6 +238,8 @@ const GameScreen: React.FC = () => {
         'Could not start game session. Playing in offline mode.',
       );
       await startGame();
+    } finally {
+      setLoading(false);
     }
   };
 

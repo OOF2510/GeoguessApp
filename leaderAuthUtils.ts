@@ -58,6 +58,7 @@ export const startGameSession = async (): Promise<{
       headers: {
         'X-Firebase-AppCheck': token,
       },
+      timeout: 15000,
     },
   );
   return response.data;
