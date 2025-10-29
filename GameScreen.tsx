@@ -13,7 +13,7 @@ import {
   BackHandler,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NavigationProp } from './navigationTypes';
 import {
   getImageWithCountry,
@@ -45,6 +45,7 @@ interface PrefetchedRound {
 const TOTAL_ROUNDS = 10;
 
 const GameScreen: React.FC = () => {
+  console.log('GameScreen component rendered');
   const navigation = useNavigation<NavigationProp>();
   const [loading, setLoading] = useState<boolean>(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -82,8 +83,11 @@ const GameScreen: React.FC = () => {
   };
 
   const startGame = async (): Promise<void> => {
+    console.log('startGame called');
     const hasPrefetched: boolean = nextRound !== null;
+    console.log('hasPrefetched:', hasPrefetched);
     if (!hasPrefetched) {
+      console.log('Setting loading to true');
       setLoading(true);
     }
     setImageUrl(null);
@@ -106,7 +110,7 @@ const GameScreen: React.FC = () => {
         if (!result) {
           Alert.alert('Error', 'Could not fetch an image. Try again.');
           if (!hasPrefetched) {
-            setLoading(false);
+            setLoading(true);
           }
           return;
         }
@@ -116,7 +120,7 @@ const GameScreen: React.FC = () => {
       if (!roundData) {
         Alert.alert('Error', 'Could not fetch an image. Try again.');
         if (!hasPrefetched) {
-          setLoading(false);
+          setLoading(true);
         }
         return;
       }
@@ -216,6 +220,7 @@ const GameScreen: React.FC = () => {
   };
 
   const initializeGameSession = async (): Promise<void> => {
+    console.log('initializeGameSession called');
     try {
       const session = await startGameSession();
       setGameSessionId(session.gameSessionId);
@@ -423,10 +428,16 @@ const GameScreen: React.FC = () => {
     loadHighScore();
   }, []);
 
-  useEffect(() => {
-    initializeGameSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Screen focused - initializing game');
+      // Only initialize if there's no current game
+      if (!imageUrl) {
+        initializeGameSession();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
 
   return (
     <View style={styles.container}>
@@ -540,14 +551,16 @@ const GameScreen: React.FC = () => {
                 </Text>
               )}
               <View style={gameSummaryStyles.buttonContainer}>
-                <TouchableOpacity 
-                  style={[styles.button, { backgroundColor: '#4CAF50' }]} 
+                <TouchableOpacity
+                  style={[styles.button, { backgroundColor: '#4CAF50' }]}
                   onPress={continueGame}
                 >
-                  <Text style={styles.buttonText}>Continue Game (10 more rounds)</Text>
+                  <Text style={styles.buttonText}>
+                    Continue Game (10 more rounds)
+                  </Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.button, { backgroundColor: '#2196F3' }]} 
+                <TouchableOpacity
+                  style={[styles.button, { backgroundColor: '#2196F3' }]}
                   onPress={async () => {
                     if (gameSessionId && currentScore > 0) {
                       try {
@@ -560,11 +573,17 @@ const GameScreen: React.FC = () => {
                         setCurrentScore(0);
                         setCorrectAnswers(0);
                         setRoundNumber(1);
-                        Alert.alert('Success', 'Score submitted to leaderboard! Starting fresh game...');
+                        Alert.alert(
+                          'Success',
+                          'Score submitted to leaderboard! Starting fresh game...',
+                        );
                         startGame();
                       } catch (error) {
                         console.error('Error submitting score:', error);
-                        Alert.alert('Error', 'Could not submit score to leaderboard.');
+                        Alert.alert(
+                          'Error',
+                          'Could not submit score to leaderboard.',
+                        );
                       }
                     } else {
                       // If no score to submit, just start fresh
@@ -581,7 +600,9 @@ const GameScreen: React.FC = () => {
                   style={[styles.button, { backgroundColor: '#F44336' }]}
                   onPress={handleReturnToMainMenu}
                 >
-                  <Text style={styles.buttonText}>Return to Main Menu (Submit to Leaderboard)</Text>
+                  <Text style={styles.buttonText}>
+                    Return to Main Menu (Submit to Leaderboard)
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
