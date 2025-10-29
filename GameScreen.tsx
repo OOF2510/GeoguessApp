@@ -63,6 +63,7 @@ const GameScreen: React.FC = () => {
   const [highScore, setHighScore] = useState<number>(0);
   const [nextRound, setNextRound] = useState<PrefetchedRound | null>(null);
   const prefetchIdRef = useRef<number>(0);
+  const initializingRef = useRef<boolean>(false);
   const [roundNumber, setRoundNumber] = useState<number>(1);
   const [correctAnswers, setCorrectAnswers] = useState<number>(0);
   const [showGameSummary, setShowGameSummary] = useState<boolean>(false);
@@ -110,7 +111,7 @@ const GameScreen: React.FC = () => {
         if (!result) {
           Alert.alert('Error', 'Could not fetch an image. Try again.');
           if (!hasPrefetched) {
-            setLoading(true);
+            setLoading(false);
           }
           return;
         }
@@ -120,7 +121,7 @@ const GameScreen: React.FC = () => {
       if (!roundData) {
         Alert.alert('Error', 'Could not fetch an image. Try again.');
         if (!hasPrefetched) {
-          setLoading(true);
+          setLoading(false);
         }
         return;
       }
@@ -221,18 +222,25 @@ const GameScreen: React.FC = () => {
 
   const initializeGameSession = async (): Promise<void> => {
     console.log('initializeGameSession called');
+    if (initializingRef.current) {
+      console.log('Initialization already in progress, skipping.');
+      return;
+    }
+    initializingRef.current = true;
     try {
       const session = await startGameSession();
       setGameSessionId(session.gameSessionId);
       console.log('Game session started:', session.gameSessionId);
-      startGame();
+      await startGame();
     } catch (error) {
       console.error('Error starting game session:', error);
       Alert.alert(
         'Warning',
         'Could not start game session. Playing in offline mode.',
       );
-      startGame();
+      await startGame();
+    } finally {
+      initializingRef.current = false;
     }
   };
 
@@ -426,6 +434,12 @@ const GameScreen: React.FC = () => {
       }
     };
     loadHighScore();
+  }, []);
+
+  useEffect(() => {
+    console.log('Component mounted - initializing game session');
+    initializeGameSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useFocusEffect(
