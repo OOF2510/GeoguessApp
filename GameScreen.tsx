@@ -66,6 +66,7 @@ const GameScreen: React.FC = () => {
   const initializingRef = useRef<boolean>(false);
   const imageUrlRef = useRef<string | null>(imageUrl);
   const loadingRef = useRef<boolean>(loading);
+  const isScreenActiveRef = useRef<boolean>(false);
   const [roundNumber, setRoundNumber] = useState<number>(1);
   const [correctAnswers, setCorrectAnswers] = useState<number>(0);
   const [showGameSummary, setShowGameSummary] = useState<boolean>(false);
@@ -77,7 +78,7 @@ const GameScreen: React.FC = () => {
       const result = await getImageWithCountry();
       if (!result) return;
 
-      if (prefetchIdRef.current === requestId) {
+      if (prefetchIdRef.current === requestId && isScreenActiveRef.current) {
         setNextRound({ image: result.image, countryInfo: result.countryInfo });
       }
     } catch (e) {
@@ -87,6 +88,10 @@ const GameScreen: React.FC = () => {
 
   const startGame = useCallback(async (): Promise<void> => {
     console.log('startGame called');
+    if (!isScreenActiveRef.current) {
+      console.log('startGame aborted - screen not active');
+      return;
+    }
     const hasPrefetched: boolean = nextRound !== null;
     console.log('hasPrefetched:', hasPrefetched);
     if (!hasPrefetched) {
@@ -122,6 +127,13 @@ const GameScreen: React.FC = () => {
 
       if (!roundData) {
         Alert.alert('Error', 'Could not fetch an image. Try again.');
+        if (!hasPrefetched) {
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (!isScreenActiveRef.current) {
         if (!hasPrefetched) {
           setLoading(false);
         }
@@ -455,9 +467,29 @@ const GameScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       console.log('Screen focused - initializing game');
-      if (!imageUrlRef.current && !loadingRef.current) {
-        initializeGameSession();
-      }
+      isScreenActiveRef.current = true;
+      initializeGameSession();
+
+      return () => {
+        console.log('Screen blurred - resetting game state');
+        isScreenActiveRef.current = false;
+        initializingRef.current = false;
+        prefetchIdRef.current += 1;
+        setNextRound(null);
+        setImageUrl(null);
+        imageUrlRef.current = null;
+        setCountry(null);
+        setCountryCode(null);
+        setDisplayName(null);
+        setCoord(null);
+        setGuess('');
+        setGuessCount(0);
+        setIncorrectGuesses([]);
+        setFeedback('');
+        setGameOver(false);
+        setLoading(false);
+        loadingRef.current = false;
+      };
     }, [initializeGameSession]),
   );
 
