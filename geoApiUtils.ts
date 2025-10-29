@@ -83,9 +83,7 @@ function matchGuess(
   if (code && (guess === code || guess === code.toLowerCase())) return true;
   if (!country) return false;
   const aliases = countryAliases(country, code);
-  return aliases.some(
-    (alias: string) => guess === alias || guess.includes(alias),
-  );
+  return aliases.some((alias: string) => guess === alias);
 }
 
 function countryAliases(country: string | null, code: string | null): string[] {
@@ -120,8 +118,9 @@ function countryAliases(country: string | null, code: string | null): string[] {
     base.add('dprk');
     base.add('democratic peoples republic of korea');
   }
-  if (c.includes('uae')) {
+  if (c.includes('united arab emirates') || c === 'uae') {
     base.add('united arab emirates');
+    base.add('uae');
   }
   if (c.includes('czechia')) {
     base.add('czech republic');

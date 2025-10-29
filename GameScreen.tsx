@@ -197,7 +197,10 @@ const GameScreen: React.FC = () => {
     // Check if round is complete
     if (isCorrect || newGuessCount >= 3) {
       if (roundNumber >= TOTAL_ROUNDS) {
-        setShowGameSummary(true);
+        // Delay showing the modal to let users see the correct answer
+        setTimeout(() => {
+          setShowGameSummary(true);
+        }, 2800);
       } else {
         setRoundNumber(prev => prev + 1);
       }
@@ -537,14 +540,48 @@ const GameScreen: React.FC = () => {
                 </Text>
               )}
               <View style={gameSummaryStyles.buttonContainer}>
-                <TouchableOpacity style={styles.button} onPress={continueGame}>
-                  <Text style={styles.buttonText}>Play Again (10 more)</Text>
+                <TouchableOpacity 
+                  style={[styles.button, { backgroundColor: '#4CAF50' }]} 
+                  onPress={continueGame}
+                >
+                  <Text style={styles.buttonText}>Continue Game (10 more rounds)</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.button, { backgroundColor: '#2196F3' }]} 
+                  onPress={async () => {
+                    if (gameSessionId && currentScore > 0) {
+                      try {
+                        await submitScore(gameSessionId, currentScore, {
+                          correctAnswers,
+                          totalRounds: TOTAL_ROUNDS,
+                          roundsPlayed: roundNumber,
+                        });
+                        // Reset score and start fresh
+                        setCurrentScore(0);
+                        setCorrectAnswers(0);
+                        setRoundNumber(1);
+                        Alert.alert('Success', 'Score submitted to leaderboard! Starting fresh game...');
+                        startGame();
+                      } catch (error) {
+                        console.error('Error submitting score:', error);
+                        Alert.alert('Error', 'Could not submit score to leaderboard.');
+                      }
+                    } else {
+                      // If no score to submit, just start fresh
+                      setCurrentScore(0);
+                      setCorrectAnswers(0);
+                      setRoundNumber(1);
+                      startGame();
+                    }
+                  }}
+                >
+                  <Text style={styles.buttonText}>New Game</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, { backgroundColor: '#F44336' }]}
                   onPress={handleReturnToMainMenu}
                 >
-                  <Text style={styles.buttonText}>Main Menu</Text>
+                  <Text style={styles.buttonText}>Return to Main Menu (Submit to Leaderboard)</Text>
                 </TouchableOpacity>
               </View>
             </View>
