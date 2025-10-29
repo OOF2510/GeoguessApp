@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -63,12 +63,14 @@ const GameScreen: React.FC = () => {
   const [highScore, setHighScore] = useState<number>(0);
   const [nextRound, setNextRound] = useState<PrefetchedRound | null>(null);
   const prefetchIdRef = useRef<number>(0);
+  const initializationLockRef = useRef<boolean>(false);
+  const hasTriggeredInitialLoadRef = useRef<boolean>(false);
   const [roundNumber, setRoundNumber] = useState<number>(1);
   const [correctAnswers, setCorrectAnswers] = useState<number>(0);
   const [showGameSummary, setShowGameSummary] = useState<boolean>(false);
   const [gameSessionId, setGameSessionId] = useState<string | null>(null);
 
-  const prefetchNextRound = async (): Promise<void> => {
+  const prefetchNextRound = useCallback(async (): Promise<void> => {
     const requestId: number = ++prefetchIdRef.current;
     try {
       const result = await getImageWithCountry();
@@ -80,13 +82,13 @@ const GameScreen: React.FC = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
 
-  const startGame = async (): Promise<void> => {
+  const startGame = useCallback(async (): Promise<void> => {
     console.log('startGame called');
-    const hasPrefetched: boolean = nextRound !== null;
-    console.log('hasPrefetched:', hasPrefetched);
-    if (!hasPrefetched) {
+    const shouldShowLoading: boolean = nextRound === null;
+    console.log('hasPrefetched:', !shouldShowLoading);
+    if (shouldShowLoading) {
       console.log('Setting loading to true');
       setLoading(true);
     }
@@ -109,8 +111,8 @@ const GameScreen: React.FC = () => {
         const result = await getImageWithCountry();
         if (!result) {
           Alert.alert('Error', 'Could not fetch an image. Try again.');
-          if (!hasPrefetched) {
-            setLoading(true);
+          if (shouldShowLoading) {
+            setLoading(false);
           }
           return;
         }
@@ -119,8 +121,8 @@ const GameScreen: React.FC = () => {
 
       if (!roundData) {
         Alert.alert('Error', 'Could not fetch an image. Try again.');
-        if (!hasPrefetched) {
-          setLoading(true);
+        if (shouldShowLoading) {
+          setLoading(false);
         }
         return;
       }
@@ -141,8 +143,10 @@ const GameScreen: React.FC = () => {
       console.error(e);
       Alert.alert('Error', 'Failed to start game.');
     }
-    setLoading(false);
-  };
+    if (shouldShowLoading) {
+      setLoading(false);
+    }
+  }, [nextRound, prefetchNextRound]);
 
   const submitGuess = (): void => {
     if (!guess.trim()) return;
@@ -219,22 +223,28 @@ const GameScreen: React.FC = () => {
     initializeGameSession();
   };
 
-  const initializeGameSession = async (): Promise<void> => {
+  const initializeGameSession = useCallback(async (): Promise<void> => {
+    if (initializationLockRef.current) {
+      return;
+    }
+    initializationLockRef.current = true;
     console.log('initializeGameSession called');
     try {
       const session = await startGameSession();
       setGameSessionId(session.gameSessionId);
       console.log('Game session started:', session.gameSessionId);
-      startGame();
+      await startGame();
     } catch (error) {
       console.error('Error starting game session:', error);
       Alert.alert(
         'Warning',
         'Could not start game session. Playing in offline mode.',
       );
-      startGame();
+      await startGame();
+    } finally {
+      initializationLockRef.current = false;
     }
-  };
+  }, [startGame]);
 
   const handleReturnToMainMenu = async (): Promise<void> => {
     if (gameSessionId && currentScore > 0) {
@@ -428,15 +438,21 @@ const GameScreen: React.FC = () => {
     loadHighScore();
   }, []);
 
+  useEffect(() => {
+    if (!hasTriggeredInitialLoadRef.current) {
+      hasTriggeredInitialLoadRef.current = true;
+      initializeGameSession();
+    }
+  }, [initializeGameSession]);
+
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       console.log('Screen focused - initializing game');
       // Only initialize if there's no current game
-      if (!imageUrl) {
+      if (!imageUrl && !loading && !initializationLockRef.current) {
         initializeGameSession();
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []),
+    }, [imageUrl, loading, initializeGameSession]),
   );
 
   return (
