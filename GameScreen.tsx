@@ -66,6 +66,14 @@ const GameScreen: React.FC = () => {
   const [correctAnswers, setCorrectAnswers] = useState<number>(0);
   const [showGameSummary, setShowGameSummary] = useState<boolean>(false);
   const [gameSessionId, setGameSessionId] = useState<string | null>(null);
+  const summaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearSummaryTimeout = (): void => {
+    if (summaryTimeoutRef.current) {
+      clearTimeout(summaryTimeoutRef.current);
+      summaryTimeoutRef.current = null;
+    }
+  };
 
   const prefetchNextRound = async (): Promise<void> => {
     const requestId: number = ++prefetchIdRef.current;
@@ -82,6 +90,9 @@ const GameScreen: React.FC = () => {
   };
 
   const startGame = async (): Promise<void> => {
+    clearSummaryTimeout();
+    setShowGameSummary(false);
+
     const hasPrefetched: boolean = nextRound !== null;
     if (!hasPrefetched) {
       setLoading(true);
@@ -198,8 +209,10 @@ const GameScreen: React.FC = () => {
     if (isCorrect || newGuessCount >= 3) {
       if (roundNumber >= TOTAL_ROUNDS) {
         // Delay showing the modal to let users see the correct answer
-        setTimeout(() => {
+        clearSummaryTimeout();
+        summaryTimeoutRef.current = setTimeout(() => {
           setShowGameSummary(true);
+          summaryTimeoutRef.current = null;
         }, 2800);
       } else {
         setRoundNumber(prev => prev + 1);
@@ -208,6 +221,7 @@ const GameScreen: React.FC = () => {
   };
 
   const continueGame = (): void => {
+    clearSummaryTimeout();
     setRoundNumber(1);
     setCorrectAnswers(0);
     setCurrentScore(0);
@@ -245,6 +259,7 @@ const GameScreen: React.FC = () => {
         Alert.alert('Warning', 'Could not submit score to leaderboard.');
       }
     }
+    clearSummaryTimeout();
     setShowGameSummary(false);
     navigation.navigate('MainMenu');
   };
@@ -425,6 +440,9 @@ const GameScreen: React.FC = () => {
 
   useEffect(() => {
     initializeGameSession();
+    return () => {
+      clearSummaryTimeout();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
