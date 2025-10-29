@@ -230,6 +230,7 @@ const GameScreen: React.FC = () => {
   };
 
   const initializeGameSession = async (): Promise<void> => {
+    setLoading(true);
     try {
       const session = await startGameSession();
       setGameSessionId(session.gameSessionId);
