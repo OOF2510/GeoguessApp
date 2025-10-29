@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from './navigationTypes';
 import RNFS from 'react-native-fs';
 import { getLeaderboard } from './leaderAuthUtils';
+import { getImageWithCountry } from './geoApiUtils';
+import type { PrefetchedRound } from './geoApiUtils';
 
 // const { width: screenWidth } = Dimensions.get('window');
 const backgroundImages: ImageSourcePropType[] = [
@@ -50,6 +52,11 @@ const MainMenu: React.FC = () => {
     }>
   >([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
+  const [prefetchedRound, setPrefetchedRound] = useState<PrefetchedRound | null>(
+    null,
+  );
+  const isPrefetchingRef = useRef(false);
+  const prefetchedRoundRef = useRef<PrefetchedRound | null>(null);
 
   // Preload images on component mount
   useEffect(() => {
@@ -66,6 +73,37 @@ const MainMenu: React.FC = () => {
     // Load cached images from storage
     loadCachedImages();
   }, []);
+
+  const prefetchInitialRound = useCallback(async () => {
+    if (isPrefetchingRef.current || prefetchedRoundRef.current) {
+      return;
+    }
+
+    isPrefetchingRef.current = true;
+    try {
+      const result = await getImageWithCountry();
+      if (result) {
+        setPrefetchedRound({
+          image: result.image,
+          countryInfo: result.countryInfo,
+        });
+      } else {
+        setPrefetchedRound(null);
+      }
+    } catch (error) {
+      console.error('Error prefetching initial round:', error);
+      setPrefetchedRound(null);
+    }
+    isPrefetchingRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    prefetchInitialRound();
+  }, [prefetchInitialRound]);
+
+  useEffect(() => {
+    prefetchedRoundRef.current = prefetchedRound;
+  }, [prefetchedRound]);
 
   const loadCachedImages = async () => {
     try {
@@ -134,7 +172,21 @@ const MainMenu: React.FC = () => {
   };
 
   const handleStartGame = () => {
-    navigation.navigate('Game');
+    const hasRoundReady = prefetchedRound !== null;
+    const prefetchWasInFlight = isPrefetchingRef.current;
+
+    navigation.navigate('Game', { prefetchedRound });
+    setPrefetchedRound(null);
+    prefetchedRoundRef.current = null;
+
+    if (!hasRoundReady) {
+      if (!prefetchWasInFlight) {
+        prefetchInitialRound();
+      }
+      return;
+    }
+
+    prefetchInitialRound();
   };
 
   const handleLeaderboard = async () => {

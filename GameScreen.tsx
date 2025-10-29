@@ -13,39 +13,21 @@ import {
   BackHandler,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
-import { NavigationProp } from './navigationTypes';
-import {
-  getImageWithCountry,
-  normalizeCountry,
-  matchGuess,
-} from './geoApiUtils';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { RouteProp } from '@react-navigation/native';
+import { NavigationProp, RootStackParamList } from './navigationTypes';
+import { getImageWithCountry, normalizeCountry, matchGuess } from './geoApiUtils';
+import type { PrefetchedRound } from './geoApiUtils';
 import { startGameSession, submitScore } from './leaderAuthUtils';
 import ImageViewer from 'react-native-image-zoom-viewer';
-
-interface ImageResult {
-  url: string;
-  coord: {
-    lat: number;
-    lon: number;
-  };
-}
-
-interface CountryInfo {
-  country: string;
-  countryCode: string;
-  displayName: string;
-}
-
-interface PrefetchedRound {
-  image: ImageResult;
-  countryInfo: CountryInfo | null;
-}
 
 const TOTAL_ROUNDS = 10;
 
 const GameScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<RouteProp<RootStackParamList, 'Game'>>();
+  const initialPrefetchedRound: PrefetchedRound | null =
+    route.params?.prefetchedRound ?? null;
   const [loading, setLoading] = useState<boolean>(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [country, setCountry] = useState<string | null>(null);
@@ -60,7 +42,9 @@ const GameScreen: React.FC = () => {
   const [zoomImage, setZoomImage] = useState<boolean>(false);
   const [currentScore, setCurrentScore] = useState<number>(0);
   const [highScore, setHighScore] = useState<number>(0);
-  const [nextRound, setNextRound] = useState<PrefetchedRound | null>(null);
+  const [nextRound, setNextRound] = useState<PrefetchedRound | null>(
+    initialPrefetchedRound,
+  );
   const prefetchIdRef = useRef<number>(0);
   const [roundNumber, setRoundNumber] = useState<number>(1);
   const [correctAnswers, setCorrectAnswers] = useState<number>(0);
@@ -82,7 +66,7 @@ const GameScreen: React.FC = () => {
       if (!result) return;
 
       if (prefetchIdRef.current === requestId) {
-        setNextRound({ image: result.image, countryInfo: result.countryInfo });
+        setNextRound(result);
       }
     } catch (e) {
       console.error(e);
@@ -118,7 +102,7 @@ const GameScreen: React.FC = () => {
           Alert.alert('Error', 'Could not fetch an image. Try again.');
           return;
         }
-        roundData = { image: result.image, countryInfo: result.countryInfo };
+        roundData = result;
       }
 
       if (!roundData) {

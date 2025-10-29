@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-interface ImageResult {
+export interface ImageResult {
   url: string;
   coord: {
     lat: number;
@@ -8,11 +8,16 @@ interface ImageResult {
   };
 }
 
-interface CountryInfo {
+export interface CountryInfo {
   country: string;
   countryCode: string;
   displayName: string;
 }
+
+export type PrefetchedRound = {
+  image: ImageResult;
+  countryInfo: CountryInfo | null;
+};
 
 interface ApiResponse {
   imageUrl: string;
@@ -23,10 +28,7 @@ interface ApiResponse {
   countryName: string;
 }
 
-async function getImageWithCountry(): Promise<{
-  image: ImageResult;
-  countryInfo: CountryInfo | null;
-} | null> {
+async function getImageWithCountry(): Promise<PrefetchedRound | null> {
   try {
     const response = await axios.get<ApiResponse>(
       'https://geo.api.oof2510.space/getImage',
