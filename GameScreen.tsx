@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   BackHandler,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from './navigationTypes';
 import {
   getImageWithCountry,
@@ -45,7 +45,6 @@ interface PrefetchedRound {
 const TOTAL_ROUNDS = 10;
 
 const GameScreen: React.FC = () => {
-  console.log('GameScreen component rendered');
   const navigation = useNavigation<NavigationProp>();
   const [loading, setLoading] = useState<boolean>(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -63,39 +62,28 @@ const GameScreen: React.FC = () => {
   const [highScore, setHighScore] = useState<number>(0);
   const [nextRound, setNextRound] = useState<PrefetchedRound | null>(null);
   const prefetchIdRef = useRef<number>(0);
-  const initializingRef = useRef<boolean>(false);
-  const imageUrlRef = useRef<string | null>(imageUrl);
-  const loadingRef = useRef<boolean>(loading);
-  const isScreenActiveRef = useRef<boolean>(false);
   const [roundNumber, setRoundNumber] = useState<number>(1);
   const [correctAnswers, setCorrectAnswers] = useState<number>(0);
   const [showGameSummary, setShowGameSummary] = useState<boolean>(false);
   const [gameSessionId, setGameSessionId] = useState<string | null>(null);
 
-  const prefetchNextRound = useCallback(async (): Promise<void> => {
+  const prefetchNextRound = async (): Promise<void> => {
     const requestId: number = ++prefetchIdRef.current;
     try {
       const result = await getImageWithCountry();
       if (!result) return;
 
-      if (prefetchIdRef.current === requestId && isScreenActiveRef.current) {
+      if (prefetchIdRef.current === requestId) {
         setNextRound({ image: result.image, countryInfo: result.countryInfo });
       }
     } catch (e) {
       console.error(e);
     }
-  }, []);
+  };
 
-  const startGame = useCallback(async (): Promise<void> => {
-    console.log('startGame called');
-    if (!isScreenActiveRef.current) {
-      console.log('startGame aborted - screen not active');
-      return;
-    }
+  const startGame = async (): Promise<void> => {
     const hasPrefetched: boolean = nextRound !== null;
-    console.log('hasPrefetched:', hasPrefetched);
     if (!hasPrefetched) {
-      console.log('Setting loading to true');
       setLoading(true);
     }
     setImageUrl(null);
@@ -133,13 +121,6 @@ const GameScreen: React.FC = () => {
         return;
       }
 
-      if (!isScreenActiveRef.current) {
-        if (!hasPrefetched) {
-          setLoading(false);
-        }
-        return;
-      }
-
       setImageUrl(roundData.image.url);
       setCoord(roundData.image.coord);
 
@@ -157,7 +138,7 @@ const GameScreen: React.FC = () => {
       Alert.alert('Error', 'Failed to start game.');
     }
     setLoading(false);
-  }, [nextRound, prefetchNextRound]);
+  };
 
   const submitGuess = (): void => {
     if (!guess.trim()) return;
@@ -234,13 +215,7 @@ const GameScreen: React.FC = () => {
     initializeGameSession();
   };
 
-  const initializeGameSession = useCallback(async (): Promise<void> => {
-    console.log('initializeGameSession called');
-    if (initializingRef.current) {
-      console.log('Initialization already in progress, skipping.');
-      return;
-    }
-    initializingRef.current = true;
+  const initializeGameSession = async (): Promise<void> => {
     try {
       const session = await startGameSession();
       setGameSessionId(session.gameSessionId);
@@ -253,10 +228,8 @@ const GameScreen: React.FC = () => {
         'Could not start game session. Playing in offline mode.',
       );
       await startGame();
-    } finally {
-      initializingRef.current = false;
     }
-  }, [startGame]);
+  };
 
   const handleReturnToMainMenu = async (): Promise<void> => {
     if (gameSessionId && currentScore > 0) {
@@ -451,47 +424,9 @@ const GameScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    imageUrlRef.current = imageUrl;
-  }, [imageUrl]);
-
-  useEffect(() => {
-    loadingRef.current = loading;
-  }, [loading]);
-
-  useEffect(() => {
-    console.log('Component mounted - initializing game session');
     initializeGameSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      console.log('Screen focused - initializing game');
-      isScreenActiveRef.current = true;
-      initializeGameSession();
-
-      return () => {
-        console.log('Screen blurred - resetting game state');
-        isScreenActiveRef.current = false;
-        initializingRef.current = false;
-        prefetchIdRef.current += 1;
-        setNextRound(null);
-        setImageUrl(null);
-        imageUrlRef.current = null;
-        setCountry(null);
-        setCountryCode(null);
-        setDisplayName(null);
-        setCoord(null);
-        setGuess('');
-        setGuessCount(0);
-        setIncorrectGuesses([]);
-        setFeedback('');
-        setGameOver(false);
-        setLoading(false);
-        loadingRef.current = false;
-      };
-    }, [initializeGameSession]),
-  );
 
   return (
     <View style={styles.container}>
