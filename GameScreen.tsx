@@ -116,6 +116,9 @@ const GameScreen: React.FC = () => {
         const result = await getImageWithCountry();
         if (!result) {
           Alert.alert('Error', 'Could not fetch an image. Try again.');
+          if (!hasPrefetched) {
+            setLoading(false);
+          }
           return;
         }
         roundData = { image: result.image, countryInfo: result.countryInfo };
@@ -123,6 +126,9 @@ const GameScreen: React.FC = () => {
 
       if (!roundData) {
         Alert.alert('Error', 'Could not fetch an image. Try again.');
+        if (!hasPrefetched) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -141,9 +147,8 @@ const GameScreen: React.FC = () => {
     } catch (e) {
       console.error(e);
       Alert.alert('Error', 'Failed to start game.');
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const submitGuess = (): void => {
@@ -203,8 +208,8 @@ const GameScreen: React.FC = () => {
     // Check if round is complete
     if (isCorrect || newGuessCount >= 3) {
       if (roundNumber >= TOTAL_ROUNDS) {
-        // Delay showing the modal to let users see the correct answer
         clearSummaryTimeout();
+        // Delay showing the modal to let users see the correct answer
         summaryTimeoutRef.current = setTimeout(() => {
           setShowGameSummary(true);
           summaryTimeoutRef.current = null;
@@ -224,26 +229,55 @@ const GameScreen: React.FC = () => {
     initializeGameSession();
   };
 
+  const handleNewGame = async (): Promise<void> => {
+    clearSummaryTimeout();
+    setShowGameSummary(false);
+
+    const scoreToSubmit = currentScore;
+    const answersToSubmit = correctAnswers;
+    const roundsPlayed = roundNumber;
+
+    if (gameSessionId && scoreToSubmit > 0) {
+      try {
+        await submitScore(gameSessionId, scoreToSubmit, {
+          correctAnswers: answersToSubmit,
+          totalRounds: TOTAL_ROUNDS,
+          roundsPlayed,
+        });
+        Alert.alert(
+          'Success',
+          'Score submitted to leaderboard! Starting fresh game...',
+        );
+      } catch (error) {
+        console.error('Error submitting score:', error);
+        Alert.alert('Error', 'Could not submit score to leaderboard.');
+      }
+    }
+
+    setCurrentScore(0);
+    setCorrectAnswers(0);
+    setRoundNumber(1);
+    startGame();
+  };
+
   const initializeGameSession = async (): Promise<void> => {
-    setLoading(true);
     try {
       const session = await startGameSession();
       setGameSessionId(session.gameSessionId);
       console.log('Game session started:', session.gameSessionId);
-      await startGame();
+      startGame();
     } catch (error) {
       console.error('Error starting game session:', error);
       Alert.alert(
         'Warning',
         'Could not start game session. Playing in offline mode.',
       );
-      await startGame();
-    } finally {
-      setLoading(false);
+      startGame();
     }
   };
 
   const handleReturnToMainMenu = async (): Promise<void> => {
+    clearSummaryTimeout();
     if (gameSessionId && currentScore > 0) {
       try {
         await submitScore(gameSessionId, currentScore, {
@@ -257,7 +291,6 @@ const GameScreen: React.FC = () => {
         Alert.alert('Warning', 'Could not submit score to leaderboard.');
       }
     }
-    clearSummaryTimeout();
     setShowGameSummary(false);
     navigation.navigate('MainMenu');
   };
@@ -438,10 +471,13 @@ const GameScreen: React.FC = () => {
 
   useEffect(() => {
     initializeGameSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     return () => {
       clearSummaryTimeout();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -560,44 +596,11 @@ const GameScreen: React.FC = () => {
                   style={[styles.button, { backgroundColor: '#4CAF50' }]}
                   onPress={continueGame}
                 >
-                  <Text style={styles.buttonText}>
-                    Continue Game (10 more rounds)
-                  </Text>
+                  <Text style={styles.buttonText}>Continue Game (10 more rounds)</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, { backgroundColor: '#2196F3' }]}
-                  onPress={async () => {
-                    if (gameSessionId && currentScore > 0) {
-                      try {
-                        await submitScore(gameSessionId, currentScore, {
-                          correctAnswers,
-                          totalRounds: TOTAL_ROUNDS,
-                          roundsPlayed: roundNumber,
-                        });
-                        // Reset score and start fresh
-                        setCurrentScore(0);
-                        setCorrectAnswers(0);
-                        setRoundNumber(1);
-                        Alert.alert(
-                          'Success',
-                          'Score submitted to leaderboard! Starting fresh game...',
-                        );
-                        startGame();
-                      } catch (error) {
-                        console.error('Error submitting score:', error);
-                        Alert.alert(
-                          'Error',
-                          'Could not submit score to leaderboard.',
-                        );
-                      }
-                    } else {
-                      // If no score to submit, just start fresh
-                      setCurrentScore(0);
-                      setCorrectAnswers(0);
-                      setRoundNumber(1);
-                      startGame();
-                    }
-                  }}
+                  onPress={handleNewGame}
                 >
                   <Text style={styles.buttonText}>New Game</Text>
                 </TouchableOpacity>
