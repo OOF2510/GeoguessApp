@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -64,12 +64,14 @@ const GameScreen: React.FC = () => {
   const [nextRound, setNextRound] = useState<PrefetchedRound | null>(null);
   const prefetchIdRef = useRef<number>(0);
   const initializingRef = useRef<boolean>(false);
+  const imageUrlRef = useRef<string | null>(imageUrl);
+  const loadingRef = useRef<boolean>(loading);
   const [roundNumber, setRoundNumber] = useState<number>(1);
   const [correctAnswers, setCorrectAnswers] = useState<number>(0);
   const [showGameSummary, setShowGameSummary] = useState<boolean>(false);
   const [gameSessionId, setGameSessionId] = useState<string | null>(null);
 
-  const prefetchNextRound = async (): Promise<void> => {
+  const prefetchNextRound = useCallback(async (): Promise<void> => {
     const requestId: number = ++prefetchIdRef.current;
     try {
       const result = await getImageWithCountry();
@@ -81,9 +83,9 @@ const GameScreen: React.FC = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
 
-  const startGame = async (): Promise<void> => {
+  const startGame = useCallback(async (): Promise<void> => {
     console.log('startGame called');
     const hasPrefetched: boolean = nextRound !== null;
     console.log('hasPrefetched:', hasPrefetched);
@@ -143,7 +145,7 @@ const GameScreen: React.FC = () => {
       Alert.alert('Error', 'Failed to start game.');
     }
     setLoading(false);
-  };
+  }, [nextRound, prefetchNextRound]);
 
   const submitGuess = (): void => {
     if (!guess.trim()) return;
@@ -220,7 +222,7 @@ const GameScreen: React.FC = () => {
     initializeGameSession();
   };
 
-  const initializeGameSession = async (): Promise<void> => {
+  const initializeGameSession = useCallback(async (): Promise<void> => {
     console.log('initializeGameSession called');
     if (initializingRef.current) {
       console.log('Initialization already in progress, skipping.');
@@ -242,7 +244,7 @@ const GameScreen: React.FC = () => {
     } finally {
       initializingRef.current = false;
     }
-  };
+  }, [startGame]);
 
   const handleReturnToMainMenu = async (): Promise<void> => {
     if (gameSessionId && currentScore > 0) {
@@ -437,20 +439,26 @@ const GameScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    imageUrlRef.current = imageUrl;
+  }, [imageUrl]);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
     console.log('Component mounted - initializing game session');
     initializeGameSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       console.log('Screen focused - initializing game');
-      // Only initialize if there's no current game
-      if (!imageUrl) {
+      if (!imageUrlRef.current && !loadingRef.current) {
         initializeGameSession();
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []),
+    }, [initializeGameSession]),
   );
 
   return (
