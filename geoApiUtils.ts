@@ -26,6 +26,7 @@ interface ApiResponse {
     lon: number;
   };
   countryName: string;
+  countryCode?: string;
 }
 
 async function getImageWithCountry(): Promise<PrefetchedRound | null> {
@@ -51,16 +52,33 @@ async function getImageWithCountry(): Promise<PrefetchedRound | null> {
       },
     };
 
-    // The new API already provides country info, so we don't need reverse geocoding
-    const countryInfo: CountryInfo = {
-      country: data.countryName ? data.countryName.toLowerCase() : '',
-      countryCode: '', // API doesn't provide country code, but we can work without it
-      displayName: data.countryName || 'Unknown',
-    };
+    const normalizedCountryName = data.countryName
+      ? normalizeCountry(data.countryName)
+      : '';
+    const normalizedCountryCode = data.countryCode
+      ? data.countryCode.trim().toUpperCase()
+      : '';
+    const displayName =
+      (data.countryName && data.countryName.trim()) ||
+      normalizedCountryCode ||
+      'Unknown';
+
+    const hasCountry = Boolean(
+      normalizedCountryName || normalizedCountryCode,
+    );
+
+    const countryInfo: CountryInfo | null = hasCountry
+      ? {
+          country:
+            normalizedCountryName || normalizedCountryCode.toLowerCase(),
+          countryCode: normalizedCountryCode,
+          displayName,
+        }
+      : null;
 
     return {
       image,
-      countryInfo: data.countryName ? countryInfo : null,
+      countryInfo,
     };
   } catch (error) {
     console.error('Error fetching image with country:', error);
