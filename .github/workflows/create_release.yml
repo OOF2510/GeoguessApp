@@ -59,26 +59,21 @@ jobs:
       - name: Create release body
         id: release-body
         run: |
-          cat > release_body.md << 'EOF'
-          # **GeoFinder Update #${{ steps.release-number.outputs.number }} (Version ${{ steps.version-info.outputs.version }})!**
-
-          __Patch Notes:__
-          $(cat commits.txt)
-
-          Submitting to google play soon!
-
-          __How to Update/Install Right Now:__
-
-          - Download [GeoFinder ${{ steps.version-info.outputs.tag }}.apk](https://github.com/OOF2510/GeoguessApp/releases/download/${{ steps.version-info.outputs.tag }}/Geofinder-${{ steps.version-info.outputs.version }}.apk)
-          - Open the APK file
-          - *Allow installing from unknown sources if prompted*
-          - *Scan with play protect if prompted*
-          - Click **"Install"**
-          EOF
-
-          # Replace $(cat commits.txt) with actual content
-          COMMITS_CONTENT=$(cat commits.txt)
-          sed -i "s|\$(cat commits.txt)|$COMMITS_CONTENT|g" release_body.md
+          # Build release body directly
+          echo "# **GeoFinder Update #${{ steps.release-number.outputs.number }} (Version ${{ steps.version-info.outputs.version }})!**" > release_body.md
+          echo "" >> release_body.md
+          echo "__Patch Notes:__" >> release_body.md
+          cat commits.txt >> release_body.md
+          echo "" >> release_body.md
+          echo "Submitting to google play soon!" >> release_body.md
+          echo "" >> release_body.md
+          echo "__How to Update/Install Right Now:__" >> release_body.md
+          echo "" >> release_body.md
+          echo "- Download [GeoFinder ${{ steps.version-info.outputs.tag }}.apk](https://github.com/OOF2510/GeoguessApp/releases/download/${{ steps.version-info.outputs.tag }}/Geofinder-${{ steps.version-info.outputs.version }}.apk)" >> release_body.md
+          echo "- Open the APK file" >> release_body.md
+          echo "- *Allow installing from unknown sources if prompted*" >> release_body.md
+          echo "- *Scan with play protect if prompted*" >> release_body.md
+          echo "- Click **\"Install\"**" >> release_body.md
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
