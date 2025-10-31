@@ -2,7 +2,7 @@
   "name": "geoguessapp",
   "author": "OOF2510",
   "license": "MPL-2.0",
-  "version": "1.1.0",
+  "version": "1.2.0-beta",
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",

@@ -35,6 +35,36 @@ jobs:
       - name: Install Dependencies
         run: npm i
 
+      - name: Extract version info
+        id: version-info
+        run: |
+          if [ "${{ github.event_name }}" == "release" ]; then
+            # Use tag name for releases (e.g., v1.2.0 -> 1.2.0)
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"  # Remove leading 'v' if present
+
+            # Generate version code from tag (e.g., 1.2.0 -> 10200)
+            IFS='.' read -r major minor patch <<< "$VERSION"
+            # Remove any non-numeric suffix (e.g., -beta)
+            patch="${patch%%-*}"
+            VERSION_CODE=$((major * 10000 + minor * 100 + patch))
+          else
+            # Use package.json version for non-release builds
+            VERSION=$(node -p "require('./package.json').version")
+            VERSION_CODE=1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION, Version Code: $VERSION_CODE"
+
+      - name: Update Android version on release
+        if: github.event_name == 'release'
+        run: |
+          sed -i "s/versionCode [0-9]*/versionCode ${{ steps.version-info.outputs.version_code }}/" android/app/build.gradle
+          sed -i "s/versionName \".*\"/versionName \"${{ steps.version-info.outputs.version }}\"/" android/app/build.gradle
+          echo "Updated build.gradle with version ${{ steps.version-info.outputs.version }} and code ${{ steps.version-info.outputs.version_code }}"
+
+      - name: Setup Java & Android SDK</parameter>
       - name: Setup Java & Android SDK
         uses: android-actions/setup-android@v3
 
@@ -114,8 +144,8 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release.apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: Geofinder-${{ steps.version-info.outputs.version }}.apk
+          path: android/app/build/outputs/apk/release/app-release.apk</parameter>
 
       - name: Upload APK to GitHub Release
         if: github.event_name == 'release'
@@ -125,5 +155,5 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: android/app/build/outputs/apk/release/app-release.apk
-          asset_name: Geofinder-${{ github.event.release.tag_name }}.apk
-          asset_content_type: application/vnd.android.package-archive
+          asset_name: Geofinder-${{ steps.version-info.outputs.version }}.apk
+          asset_content_type: application/vnd.android.package-archive</parameter>
