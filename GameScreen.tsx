@@ -496,7 +496,7 @@ const GameScreen: React.FC = () => {
               ))}
             </View>
           )}
-          {gameOver && (
+          {gameOver && roundNumber < TOTAL_ROUNDS && (
             <TouchableOpacity style={styles.buttonNext} onPress={startGame}>
               <Text style={styles.buttonText}>Next Game</Text>
             </TouchableOpacity>
