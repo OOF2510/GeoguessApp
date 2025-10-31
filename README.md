@@ -1,4 +1,4 @@
-# 🌍 GeoGuess App
+# 🌍 GeoFinder App
 
 A fun and addictive mobile game where you test your geography knowledge by guessing locations from street view images. Compete for high scores on the global leaderboard! Built with React Native and powered by my [GeoGuess API](https://geo.api.oof2510.space), which serves pre-processed street view images and location data. The API handles all the heavy lifting by:
 1. Fetching images from Mapillary's global street view network
@@ -54,7 +54,7 @@ A fun and addictive mobile game where you test your geography knowledge by guess
 - 🏆 Competitive leaderboard
 - 🔄 Smooth gameplay experience
 - 🔒 Secure API access
-- 📱 [Android app (APK download available)](https://github.com/oof2510/GeoguessApp/releases/latest)
+- 📱 [GeoFinder Android app (APK download available)](https://github.com/oof2510/GeoguessApp/releases/latest)
 
 Compete with players worldwide! The leaderboard shows:
 - Global rankings
@@ -92,14 +92,14 @@ Compete with players worldwide! The leaderboard shows:
   - @react-native-async-storage/async-storage - Local data persistence
   - react-native-fs - File system access for caching and storage
 
-### Backend ([geoguess-api](https://github.com/oof2510/geoguess-api))
+  ### Backend ([geoguess-api](https://github.com/oof2510/geoguess-api))
 - **Node.js** with **Express** - API server
 - **MongoDB** - For storing game sessions and leaderboard data
 - **Mapillary Integration** - Fetches and serves street view images
 - **OpenStreetMap Nominatim** - Provides accurate country data for locations
 - **Firebase App Check** - For API security
 
-## 🔄 Integration with geoguess-api
+## 🔄 Integration with GeoGuess API
 
 This app connects to my [geoguess-api](https://github.com/oof2510/geoguess-api) which handles:
 

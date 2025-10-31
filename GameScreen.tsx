@@ -16,7 +16,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
 import { NavigationProp, RootStackParamList } from './navigationTypes';
-import { getImageWithCountry, normalizeCountry, matchGuess } from './geoApiUtils';
+import {
+  getImageWithCountry,
+  normalizeCountry,
+  matchGuess,
+} from './geoApiUtils';
 import type { PrefetchedRound } from './geoApiUtils';
 import { startGameSession, submitScore } from './leaderAuthUtils';
 import ImageViewer from 'react-native-image-zoom-viewer';
@@ -435,7 +439,7 @@ const GameScreen: React.FC = () => {
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>GeoGuess</Text>
+          <Text style={styles.title}>GeoFinder</Text>
           <Text style={{ color: '#FFF', marginBottom: 10 }}>
             Round {roundNumber}/{TOTAL_ROUNDS}
           </Text>

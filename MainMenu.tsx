@@ -52,9 +52,8 @@ const MainMenu: React.FC = () => {
     }>
   >([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
-  const [prefetchedRound, setPrefetchedRound] = useState<PrefetchedRound | null>(
-    null,
-  );
+  const [prefetchedRound, setPrefetchedRound] =
+    useState<PrefetchedRound | null>(null);
   const isPrefetchingRef = useRef(false);
   const prefetchedRoundRef = useRef<PrefetchedRound | null>(null);
 
@@ -298,7 +297,7 @@ const MainMenu: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>GeoGuess</Text>
+          <Text style={styles.title}>GeoFinder</Text>
         </View>
         <TouchableOpacity style={styles.button} onPress={handleStartGame}>
           <Text style={styles.buttonText}>Start Game</Text>

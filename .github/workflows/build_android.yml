@@ -76,16 +76,16 @@ jobs:
       - name: Decode Release Keystore
         run: |
           # Remove newlines from base64 string and decode
-          echo "${{ secrets.RELEASE_KEYSTORE }}" | tr -d '\n\r' | base64 --decode > ./android/app/geoguess-release.keystore
+          echo "${{ secrets.RELEASE_KEYSTORE }}" | tr -d '\n\r' | base64 --decode > ./android/app/geofinder-release.keystore
 
           # Verify the keystore file was created and has content
-          if [ ! -f "./android/app/geoguess-release.keystore" ]; then
+          if [ ! -f "./android/app/geofinder-release.keystore" ]; then
             echo "Error: Keystore file was not created!"
             exit 1
           fi
 
           # Check file size
-          FILE_SIZE=$(stat -c%s "./android/app/geoguess-release.keystore")
+          FILE_SIZE=$(stat -c%s "./android/app/geofinder-release.keystore")
           echo "Keystore file size: $FILE_SIZE bytes"
 
           if [ "$FILE_SIZE" -eq 0 ]; then
@@ -96,7 +96,7 @@ jobs:
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=${{ github.workspace }}/android/app/geoguess-release.keystore \
+          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=${{ github.workspace }}/android/app/geofinder-release.keystore \
             -Pandroid.injected.signing.store.password=${{ secrets.RELEASE_STORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.RELEASE_KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.RELEASE_KEY_PASSWORD }}
@@ -125,5 +125,5 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: android/app/build/outputs/apk/release/app-release.apk
-          asset_name: Geoguess-${{ github.event.release.tag_name }}.apk
+          asset_name: Geofinder-${{ github.event.release.tag_name }}.apk
           asset_content_type: application/vnd.android.package-archive
