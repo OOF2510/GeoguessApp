@@ -64,7 +64,6 @@ jobs:
           sed -i "s/versionName \".*\"/versionName \"${{ steps.version-info.outputs.version }}\"/" android/app/build.gradle
           echo "Updated build.gradle with version ${{ steps.version-info.outputs.version }} and code ${{ steps.version-info.outputs.version_code }}"
 
-      - name: Setup Java & Android SDK</parameter>
       - name: Setup Java & Android SDK
         uses: android-actions/setup-android@v3
 
@@ -145,7 +144,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Geofinder-${{ steps.version-info.outputs.version }}.apk
-          path: android/app/build/outputs/apk/release/app-release.apk</parameter>
+          path: android/app/build/outputs/apk/release/app-release.apk
 
       - name: Upload APK to GitHub Release
         if: github.event_name == 'release'
@@ -156,4 +155,4 @@ jobs:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: android/app/build/outputs/apk/release/app-release.apk
           asset_name: Geofinder-${{ steps.version-info.outputs.version }}.apk
-          asset_content_type: application/vnd.android.package-archive</parameter>
+          asset_content_type: application/vnd.android.package-archive
