@@ -1,0 +1,92 @@
+name: Create Release from Tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for commit messages
+
+      - name: Extract version info
+        id: version-info
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          VERSION="${TAG_NAME#v}"  # Remove leading 'v' if present
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Tag: $TAG_NAME, Version: $VERSION"
+
+      - name: Get release number
+        id: release-number
+        run: |
+          # Count total number of tags to determine release number
+          RELEASE_NUM=$(git tag -l 'v*' | wc -l)
+          echo "number=$RELEASE_NUM" >> $GITHUB_OUTPUT
+          echo "Release number: $RELEASE_NUM"
+
+      - name: Get commit messages since last release
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git tag -l 'v*' --sort=-v:refname | sed -n '2p')
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            # First release, get all commits
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges)
+          else
+            # Get commits since previous tag
+            COMMITS=$(git log ${PREVIOUS_TAG}..${{ github.ref_name }} --pretty=format:"- %s" --no-merges)
+          fi
+
+          # Save to file to handle multiline output
+          echo "$COMMITS" > commits.txt
+
+          # Check if there are any commits
+          if [ -z "$COMMITS" ]; then
+            echo "- No new commits" > commits.txt
+          fi
+
+      - name: Create release body
+        id: release-body
+        run: |
+          cat > release_body.md << 'EOF'
+          # **GeoFinder Update #${{ steps.release-number.outputs.number }} (Version ${{ steps.version-info.outputs.version }})!**
+
+          __Patch Notes:__
+          $(cat commits.txt)
+
+          Submitting to google play soon!
+
+          __How to Update/Install Right Now:__
+
+          - Download [GeoFinder ${{ steps.version-info.outputs.tag }}.apk](https://github.com/OOF2510/GeoguessApp/releases/download/${{ steps.version-info.outputs.tag }}/Geofinder-${{ steps.version-info.outputs.version }}.apk)
+          - Open the APK file
+          - *Allow installing from unknown sources if prompted*
+          - *Scan with play protect if prompted*
+          - Click **"Install"**
+          EOF
+
+          # Replace $(cat commits.txt) with actual content
+          COMMITS_CONTENT=$(cat commits.txt)
+          sed -i "s|\$(cat commits.txt)|$COMMITS_CONTENT|g" release_body.md
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version-info.outputs.tag }}
+          release_name: GeoFinder ${{ steps.version-info.outputs.version }}
+          body_path: release_body.md
+          draft: false
+          prerelease: false
