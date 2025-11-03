@@ -49,6 +49,7 @@ const GameScreen: React.FC = () => {
   const prefetchIdRef = useRef<number>(0);
   const [roundNumber, setRoundNumber] = useState<number>(1);
   const [correctAnswers, setCorrectAnswers] = useState<number>(0);
+  const [completedRounds, setCompletedRounds] = useState<number>(0);
   const [showGameSummary, setShowGameSummary] = useState<boolean>(false);
   const [gameSessionId, setGameSessionId] = useState<string | null>(null);
   const summaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -74,6 +75,10 @@ const GameScreen: React.FC = () => {
   const startGame = async (): Promise<void> => {
     clearSummaryTimeout();
     setShowGameSummary(false);
+    if (completedRounds >= TOTAL_ROUNDS) {
+      setCompletedRounds(0);
+      setRoundNumber(1);
+    }
 
     const hasPrefetched: boolean = nextRound !== null;
     if (!hasPrefetched) {
@@ -184,11 +189,17 @@ const GameScreen: React.FC = () => {
 
     // Check if round is complete
     if (isCorrect || newGuessCount >= 3) {
-      if (roundNumber >= TOTAL_ROUNDS) {
-        scheduleSummaryModal(summaryTimeoutRef, setShowGameSummary);
-      } else {
-        setRoundNumber(prev => prev + 1);
-      }
+      setCompletedRounds(prevCompleted => {
+        const updatedCompleted = prevCompleted + 1;
+
+        if (updatedCompleted >= TOTAL_ROUNDS) {
+          scheduleSummaryModal(summaryTimeoutRef, setShowGameSummary);
+        } else {
+          setRoundNumber(prev => prev + 1);
+        }
+
+        return updatedCompleted;
+      });
     }
   };
 
@@ -197,6 +208,7 @@ const GameScreen: React.FC = () => {
     setRoundNumber(1);
     setCorrectAnswers(0);
     setCurrentScore(0);
+    setCompletedRounds(0);
     setShowGameSummary(false);
     initializeGameSession();
   };
@@ -226,7 +238,7 @@ const GameScreen: React.FC = () => {
         await submitScore(gameSessionId, currentScore, {
           correctAnswers,
           totalRounds: TOTAL_ROUNDS,
-          roundsPlayed: roundNumber,
+          roundsPlayed: completedRounds,
         });
         console.log('Score submitted successfully');
       } catch (error) {
@@ -485,7 +497,7 @@ const GameScreen: React.FC = () => {
               ))}
             </View>
           )}
-          {gameOver && roundNumber < TOTAL_ROUNDS && !showGameSummary && (
+          {gameOver && completedRounds < TOTAL_ROUNDS && !showGameSummary && (
             <TouchableOpacity style={styles.buttonNext} onPress={startGame}>
               <Text style={styles.buttonText}>Next Game</Text>
             </TouchableOpacity>
@@ -549,11 +561,12 @@ const GameScreen: React.FC = () => {
                         await submitScore(gameSessionId, currentScore, {
                           correctAnswers,
                           totalRounds: TOTAL_ROUNDS,
-                          roundsPlayed: roundNumber,
+                          roundsPlayed: completedRounds,
                         });
                         // Reset score and start fresh
                         setCurrentScore(0);
                         setCorrectAnswers(0);
+                        setCompletedRounds(0);
                         setRoundNumber(1);
                         Alert.alert(
                           'Success',
@@ -571,6 +584,7 @@ const GameScreen: React.FC = () => {
                       // If no score to submit, just start fresh
                       setCurrentScore(0);
                       setCorrectAnswers(0);
+                      setCompletedRounds(0);
                       setRoundNumber(1);
                       startGame();
                     }
