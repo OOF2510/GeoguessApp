@@ -83,7 +83,7 @@ android {
         applicationId "space.oof2510.geoguess"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 9999
+        versionCode 1
         versionName "1.2-beta"
     }
     signingConfigs {

@@ -16,14 +16,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
 import { NavigationProp, RootStackParamList } from './navigationTypes';
-import {
-  getImageWithCountry,
-  normalizeCountry,
-  matchGuess,
-} from './geoApiUtils';
+import { getImageWithCountry, normalizeCountry, matchGuess } from './geoApiUtils';
 import type { PrefetchedRound } from './geoApiUtils';
 import { startGameSession, submitScore } from './leaderAuthUtils';
 import ImageViewer from 'react-native-image-zoom-viewer';
+import { scheduleSummaryModal, cancelSummaryModal } from './summaryTimer';
 
 const TOTAL_ROUNDS = 10;
 
@@ -57,10 +54,7 @@ const GameScreen: React.FC = () => {
   const summaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearSummaryTimeout = (): void => {
-    if (summaryTimeoutRef.current) {
-      clearTimeout(summaryTimeoutRef.current);
-      summaryTimeoutRef.current = null;
-    }
+    cancelSummaryModal(summaryTimeoutRef);
   };
 
   const prefetchNextRound = async (): Promise<void> => {
@@ -191,12 +185,7 @@ const GameScreen: React.FC = () => {
     // Check if round is complete
     if (isCorrect || newGuessCount >= 3) {
       if (roundNumber >= TOTAL_ROUNDS) {
-        // Delay showing the modal to let users see the correct answer
-        clearSummaryTimeout();
-        summaryTimeoutRef.current = setTimeout(() => {
-          setShowGameSummary(true);
-          summaryTimeoutRef.current = null;
-        }, 2800);
+        scheduleSummaryModal(summaryTimeoutRef, setShowGameSummary);
       } else {
         setRoundNumber(prev => prev + 1);
       }
@@ -496,7 +485,7 @@ const GameScreen: React.FC = () => {
               ))}
             </View>
           )}
-          {gameOver && roundNumber < TOTAL_ROUNDS && (
+          {gameOver && roundNumber < TOTAL_ROUNDS && !showGameSummary && (
             <TouchableOpacity style={styles.buttonNext} onPress={startGame}>
               <Text style={styles.buttonText}>Next Game</Text>
             </TouchableOpacity>
