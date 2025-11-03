@@ -137,7 +137,7 @@ jobs:
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=${{ github.workspace }}/android/app/geofinder-release.keystore \
+          ./gradlew assembleRelease bundleRelease -Pandroid.injected.signing.store.file=${{ github.workspace }}/android/app/geofinder-release.keystore \
             -Pandroid.injected.signing.store.password=${{ secrets.RELEASE_STORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.RELEASE_KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.RELEASE_KEY_PASSWORD }}
@@ -152,11 +152,23 @@ jobs:
           LATEST_BUILD_TOOLS_VERSION=$(ls "$ANDROID_HOME/build-tools" | sort -r | head -n 1)
           APKSIGNER_PATH="$ANDROID_HOME/build-tools/$LATEST_BUILD_TOOLS_VERSION/apksigner"
           $APKSIGNER_PATH verify --print-certs -v android/app/build/outputs/apk/release/app-release.apk
+      - name: Verify AAB Signing
+        run: |
+          jarsigner -verify -verbose android/app/build/outputs/bundle/release/app-release.aab
+      - name: Display AAB Signing Certificate Information
+        run: |
+          jarsigner -verify -verbose -certs android/app/build/outputs/bundle/release/app-release.aab
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Geofinder-${{ steps.version-info.outputs.version }}.apk
           path: android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload AAB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Geofinder-${{ steps.version-info.outputs.version }}.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
 
       - name: Get Release Upload URL
         if: startsWith(github.ref, 'refs/tags/v')
@@ -183,3 +195,14 @@ jobs:
           asset_path: android/app/build/outputs/apk/release/app-release.apk
           asset_name: Geofinder-${{ steps.version-info.outputs.version }}.apk
           asset_content_type: application/vnd.android.package-archive
+
+      - name: Upload AAB to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') && steps.get_release.outputs.upload_url
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: android/app/build/outputs/bundle/release/app-release.aab
+          asset_name: Geofinder-${{ steps.version-info.outputs.version }}.aab
+          asset_content_type: application/vnd.android.bundle
