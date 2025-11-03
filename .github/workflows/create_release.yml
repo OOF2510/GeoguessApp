@@ -61,10 +61,10 @@ jobs:
         run: |
           # Build release body directly
           echo "# **GeoFinder Update #${{ steps.release-number.outputs.number }} (Version ${{ steps.version-info.outputs.version }})!**" > release_body.md
-          echo "" >> release_body.md
+          echo "____" >> release_body.md
           echo "__Patch Notes:__" >> release_body.md
           cat commits.txt >> release_body.md
-          echo "" >> release_body.md
+          echo "____" >> release_body.md
           echo "Submitting to google play soon!" >> release_body.md
           echo "" >> release_body.md
           echo "__How to Update/Install Right Now:__" >> release_body.md
