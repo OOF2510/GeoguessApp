@@ -61,13 +61,13 @@ jobs:
         run: |
           # Build release body directly
           echo "# **GeoFinder Update #${{ steps.release-number.outputs.number }} (Version ${{ steps.version-info.outputs.version }})!**" > release_body.md
-          echo "<br>" >> release_body.md
-          echo "<u>__Patch Notes:__</u>" >> release_body.md
+          echo "" >> release_body.md
+          echo "__Patch Notes:__" >> release_body.md
           cat commits.txt >> release_body.md
-          echo "<br>" >> release_body.md
+          echo "" >> release_body.md
           echo "Submitting to google play very soon!" >> release_body.md
           echo "" >> release_body.md
-          echo "<u>__How to Update/Install Right Now:__</u>" >> release_body.md
+          echo "__How to Update/Install Right Now:__" >> release_body.md
           echo "" >> release_body.md
           echo "- Download [GeoFinder ${{ steps.version-info.outputs.tag }}.apk](https://github.com/OOF2510/GeoguessApp/releases/download/${{ steps.version-info.outputs.tag }}/Geofinder-${{ steps.version-info.outputs.version }}.apk)" >> release_body.md
           echo "- Open the APK file" >> release_body.md
