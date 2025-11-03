@@ -188,6 +188,25 @@ const MainMenu: React.FC = () => {
     prefetchInitialRound();
   };
 
+    const handleStartAiGame = () => {
+    const hasRoundReady = prefetchedRound !== null;
+    const prefetchWasInFlight = isPrefetchingRef.current;
+
+    navigation.navigate('AiDuel', { prefetchedRound });
+    setPrefetchedRound(null);
+    prefetchedRoundRef.current = null;
+
+    if (!hasRoundReady) {
+      if (!prefetchWasInFlight) {
+        prefetchInitialRound();
+      }
+      return;
+    }
+
+    prefetchInitialRound();
+  };
+
+
   const handleLeaderboard = async () => {
     setShowLeaderboard(true);
     setLoadingLeaderboard(true);
@@ -302,10 +321,10 @@ const MainMenu: React.FC = () => {
         <TouchableOpacity style={styles.button} onPress={handleStartGame}>
           <Text style={styles.buttonText}>Start Game</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.leaderboardButton}
-          onPress={handleLeaderboard}
-        >
+       <TouchableOpacity style={styles.aiButton} onPress={handleStartAiGame}>
+          <Text style={styles.buttonText}>Play vs AI</Text>
+        </TouchableOpacity> 
+        <TouchableOpacity style={styles.leaderboardButton} onPress={handleLeaderboard}>
           <Text style={styles.buttonText}>Leaderboard</Text>
         </TouchableOpacity>
       </View>
@@ -405,6 +424,15 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderRadius: 25,
     backgroundColor: 'rgba(76,175,80,0.56)',
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiButton: {
+    width: '80%',
+    marginBottom: 15,
+    borderRadius: 25,
+    backgroundColor: 'rgba(160, 9, 247, 0.56)',
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',

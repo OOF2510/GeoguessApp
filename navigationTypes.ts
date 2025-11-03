@@ -4,7 +4,7 @@ import type { PrefetchedRound } from './geoApiUtils';
 export type RootStackParamList = {
   MainMenu: undefined;
   Game: { prefetchedRound?: PrefetchedRound | null } | undefined;
-  // Add other screens here as you create them
+  AiDuel: { prefetchedRound?: PrefetchedRound | null } | undefined;
 };
 
 export type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
