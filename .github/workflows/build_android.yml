@@ -158,11 +158,32 @@ jobs:
       - name: Display AAB Signing Certificate Information
         run: |
           jarsigner -verify -verbose -certs android/app/build/outputs/bundle/release/app-release.aab
+      - name: Download Bundletool
+        run: |
+          BUNDLETOOL_VERSION=1.17.2
+          curl -sSL -o bundletool.jar https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar
+      - name: Build Split APK Set from AAB
+        run: |
+          set -euo pipefail
+          BUNDLETOOL_JAR=./bundletool.jar
+          SPLIT_APKS_PATH=android/app/build/outputs/bundle/release/app-release-split.apks
+          java -jar "$BUNDLETOOL_JAR" build-apks \
+            --bundle android/app/build/outputs/bundle/release/app-release.aab \
+            --output "$SPLIT_APKS_PATH" \
+            --ks android/app/geofinder-release.keystore \
+            --ks-key-alias "${{ secrets.RELEASE_KEY_ALIAS }}" \
+            --ks-pass pass:${{ secrets.RELEASE_STORE_PASSWORD }} \
+            --key-pass pass:${{ secrets.RELEASE_KEY_PASSWORD }}
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Geofinder-${{ steps.version-info.outputs.version }}.apk
           path: android/app/build/outputs/apk/release/app-release.apk
+      - name: Upload Split APKS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Geofinder-${{ steps.version-info.outputs.version }}.apks
+          path: android/app/build/outputs/bundle/release/app-release-split.apks
 
       - name: Upload AAB Artifact
         uses: actions/upload-artifact@v4
@@ -206,3 +227,13 @@ jobs:
           asset_path: android/app/build/outputs/bundle/release/app-release.aab
           asset_name: Geofinder-${{ steps.version-info.outputs.version }}.aab
           asset_content_type: application/vnd.android.bundle
+      - name: Upload Split APKS to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') && steps.get_release.outputs.upload_url
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: android/app/build/outputs/bundle/release/app-release-split.apks
+          asset_name: Geofinder-${{ steps.version-info.outputs.version }}.apks
+          asset_content_type: application/octet-stream
