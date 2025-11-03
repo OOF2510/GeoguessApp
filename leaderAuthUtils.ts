@@ -2,11 +2,13 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import appCheck from '@react-native-firebase/app-check';
 import { decode } from 'base-64';
+import { initializeFirebase } from './firebase';
 
 const API_BASE_URL = 'https://geo.api.oof2510.space';
 
 let appCheckToken = '';
 let appCheckTokenExpiry = 0;
+let firebaseInitialized = false;
 
 // Helper function to parse JWT and get expiry time
 const getTokenExpiry = (token: string): number => {
@@ -24,6 +26,15 @@ const getTokenExpiry = (token: string): number => {
 
 // Initialize Firebase App Check
 export const initAppCheck = async () => {
+  if (!firebaseInitialized) {
+    try {
+      initializeFirebase();
+      firebaseInitialized = true;
+    } catch (error) {
+      console.error('Error initializing Firebase App Check provider:', error);
+    }
+  }
+
   try {
     const appCheckTokenResult = await appCheck().getToken(true);
     if (appCheckTokenResult) {
