@@ -16,7 +16,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
 import { NavigationProp, RootStackParamList } from './navigationTypes';
-import { getImageWithCountry, normalizeCountry, matchGuess } from './geoApiUtils';
+import {
+  getImageWithCountry,
+  normalizeCountry,
+  matchGuess,
+} from './geoApiUtils';
 import type { PrefetchedRound } from './geoApiUtils';
 import { startGameSession, submitScore } from './leaderAuthUtils';
 import ImageViewer from 'react-native-image-zoom-viewer';
@@ -35,6 +39,7 @@ const GameScreen: React.FC = () => {
   const [countryCode, setCountryCode] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [coord, setCoord] = useState<{ lat: number; lon: number } | null>(null);
+  const [contributor, setContributor] = useState<string | null>(null);
   const [guess, setGuess] = useState<string>('');
   const [guessCount, setGuessCount] = useState<number>(0);
   const [incorrectGuesses, setIncorrectGuesses] = useState<string[]>([]);
@@ -89,6 +94,7 @@ const GameScreen: React.FC = () => {
     setCountryCode(null);
     setDisplayName(null);
     setCoord(null);
+    setContributor(null);
     setGuess('');
     setGuessCount(0);
     setIncorrectGuesses([]);
@@ -115,6 +121,7 @@ const GameScreen: React.FC = () => {
 
       setImageUrl(roundData.image.url);
       setCoord(roundData.image.coord);
+      setContributor(roundData.image.contributor ?? null);
 
       if (roundData.countryInfo) {
         setCountry(roundData.countryInfo.country);
@@ -504,7 +511,11 @@ const GameScreen: React.FC = () => {
           )}
         </ScrollView>
 
-        <Text style={styles.attribution}>Images provided via Mapillary</Text>
+        <Text style={styles.attribution}>
+          {contributor
+            ? `Image by ${contributor} at Mapillary, CC-BY-SA`
+            : 'Images provided via Mapillary'}
+        </Text>
         <View style={styles.scoreContainer}>
           <Text style={styles.scoreText}>High Score: {highScore}</Text>
           <Text style={styles.scoreText}>Score: {currentScore}</Text>

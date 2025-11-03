@@ -6,6 +6,7 @@ export interface ImageResult {
     lat: number;
     lon: number;
   };
+  contributor?: string | null;
 }
 
 export interface CountryInfo {
@@ -27,6 +28,7 @@ interface ApiResponse {
   };
   countryName: string;
   countryCode?: string;
+  contributor?: string | null;
 }
 
 async function getImageWithCountry(): Promise<PrefetchedRound | null> {
@@ -50,6 +52,7 @@ async function getImageWithCountry(): Promise<PrefetchedRound | null> {
         lat: data.coordinates.lat,
         lon: data.coordinates.lon,
       },
+      contributor: data.contributor,
     };
 
     const normalizedCountryName = data.countryName
@@ -63,14 +66,11 @@ async function getImageWithCountry(): Promise<PrefetchedRound | null> {
       normalizedCountryCode ||
       'Unknown';
 
-    const hasCountry = Boolean(
-      normalizedCountryName || normalizedCountryCode,
-    );
+    const hasCountry = Boolean(normalizedCountryName || normalizedCountryCode);
 
     const countryInfo: CountryInfo | null = hasCountry
       ? {
-          country:
-            normalizedCountryName || normalizedCountryCode.toLowerCase(),
+          country: normalizedCountryName || normalizedCountryCode.toLowerCase(),
           countryCode: normalizedCountryCode,
           displayName,
         }

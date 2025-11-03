@@ -13,6 +13,7 @@ export type AiDuelStatus = 'in-progress' | 'completed' | string;
 export interface AiDuelRound {
   roundIndex: number;
   imageUrl: string;
+  contributor?: string | null;
 }
 
 export interface AiDuelMatchResponse {
@@ -56,6 +57,7 @@ export interface AiDuelHistoryEntry {
 export interface AiDuelGuessResult {
   correctCountry?: AiDuelCountry | null;
   coordinates?: AiDuelCoordinates | null;
+  contributor?: string | null;
   playerResult?: AiDuelGuessParticipant | null;
   aiResult?: AiDuelAiResult | null;
   scores?: AiDuelScores;
@@ -90,11 +92,10 @@ const buildApiError = (
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<any>;
     const payload = axiosError.response?.data ?? null;
-    const messageFromPayload =
-      (payload &&
-        (payload.errorDescription ||
-          payload.error ||
-          payload.message)) as string | undefined;
+    const messageFromPayload = (payload &&
+      (payload.errorDescription || payload.error || payload.message)) as
+      | string
+      | undefined;
 
     const apiError: AiDuelApiError = new Error(
       messageFromPayload || fallbackMessage,

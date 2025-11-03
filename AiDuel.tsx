@@ -1,9 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -165,6 +160,11 @@ const AiDuel: React.FC = () => {
   }, [currentRound, totalRounds]);
 
   const displayedImageUrl = currentRound?.imageUrl ?? prefetchedImageUrl;
+  const displayedContributor =
+    currentRound?.contributor ??
+    latestResult?.contributor ??
+    initialPrefetchedRound?.image.contributor ??
+    null;
   const canSubmitGuess =
     !loading && !submitting && status === 'in-progress' && currentRound;
   const guessReady = guess.trim().length > 0;
@@ -217,7 +217,9 @@ const AiDuel: React.FC = () => {
 
       if (duelError.code === 'round_out_of_sync') {
         const expectedRound = payload?.expectedRound as AiDuelRound | undefined;
-        const nextHistory = payload?.history as AiDuelHistoryEntry[] | undefined;
+        const nextHistory = payload?.history as
+          | AiDuelHistoryEntry[]
+          | undefined;
         const nextScores = payload?.scores as AiDuelScores | undefined;
         const nextStatus = payload?.status as AiDuelStatus | undefined;
 
@@ -237,10 +239,14 @@ const AiDuel: React.FC = () => {
         setQueuedRound(null);
         setLatestResult(null);
         setGuess('');
-        setErrorMessage('The match messed up and got behind. Try guessing again!');
+        setErrorMessage(
+          'The match messed up and got behind. Try guessing again!',
+        );
       } else if (duelError.code === 'match_completed') {
         const nextScores = payload?.scores as AiDuelScores | undefined;
-        const nextHistory = payload?.history as AiDuelHistoryEntry[] | undefined;
+        const nextHistory = payload?.history as
+          | AiDuelHistoryEntry[]
+          | undefined;
         if (nextScores) {
           setScores({ ...nextScores });
         }
@@ -293,8 +299,8 @@ const AiDuel: React.FC = () => {
           <Text style={styles.title}>GeoFinder AI Duel</Text>
           <Text style={styles.subtitle}>
             Challenge GeoFinder&apos;s AI opponent across a multi-round match.
-            Guess the country, compare results, and see how the AI reasoned about
-            the image.
+            Guess the country, compare results, and see how the AI reasoned
+            about the image.
           </Text>
 
           <View style={styles.buttonRow}>
@@ -369,7 +375,11 @@ const AiDuel: React.FC = () => {
               )}
             </TouchableOpacity>
 
-            <Text style={styles.attribution}>Images provided via Mapillary</Text>
+            <Text style={styles.attribution}>
+              {displayedContributor
+                ? `Image by ${displayedContributor} at Mapillary, CC-BY-SA`
+                : 'Images provided via Mapillary'}
+            </Text>
 
             {status === 'in-progress' && currentRound && !latestResult && (
               <>
@@ -387,7 +397,9 @@ const AiDuel: React.FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
-                    !guessReady || !canSubmitGuess ? styles.disabledButton : null,
+                    !guessReady || !canSubmitGuess
+                      ? styles.disabledButton
+                      : null,
                   ]}
                   onPress={handleSubmitGuess}
                   disabled={!guessReady || !canSubmitGuess}
@@ -460,9 +472,8 @@ const AiDuel: React.FC = () => {
                       {formatCountry(latestResult.aiResult.countryName)}
                     </Text>
                     <Text style={styles.aiResultMeta}>
-                      Confidence {formatConfidence(
-                        latestResult.aiResult.confidence,
-                      )}
+                      Confidence{' '}
+                      {formatConfidence(latestResult.aiResult.confidence)}
                     </Text>
                     {latestResult.aiResult.explanation ? (
                       <Text style={styles.aiResultExplanation}>
@@ -475,8 +486,7 @@ const AiDuel: React.FC = () => {
                     )}
                     {latestResult.aiResult.fallbackReason ? (
                       <Text style={styles.aiResultFallback}>
-                        Fallback reason:{' '}
-                        {latestResult.aiResult.fallbackReason}
+                        Fallback reason: {latestResult.aiResult.fallbackReason}
                       </Text>
                     ) : null}
                   </View>
@@ -547,8 +557,7 @@ const AiDuel: React.FC = () => {
                         </Text>
                         {round.ai ? (
                           <Text style={styles.historyGuessMeta}>
-                            Confidence{' '}
-                            {formatConfidence(round.ai.confidence)}
+                            Confidence {formatConfidence(round.ai.confidence)}
                           </Text>
                         ) : null}
                       </View>
