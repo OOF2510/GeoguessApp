@@ -5,6 +5,7 @@ export type RootStackParamList = {
   MainMenu: undefined;
   Game: { prefetchedRound?: PrefetchedRound | null } | undefined;
   AiDuel: { prefetchedRound?: PrefetchedRound | null } | undefined;
+  Licences: undefined;
 };
 
 export type NavigationProp = NativeStackNavigationProp<RootStackParamList>;

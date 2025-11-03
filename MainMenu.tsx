@@ -52,6 +52,7 @@ const MainMenu: React.FC = () => {
     }>
   >([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
+  const [showCredits, setShowCredits] = useState<boolean>(false);
   const [prefetchedRound, setPrefetchedRound] =
     useState<PrefetchedRound | null>(null);
   const isPrefetchingRef = useRef(false);
@@ -188,7 +189,7 @@ const MainMenu: React.FC = () => {
     prefetchInitialRound();
   };
 
-    const handleStartAiGame = () => {
+  const handleStartAiGame = () => {
     const hasRoundReady = prefetchedRound !== null;
     const prefetchWasInFlight = isPrefetchingRef.current;
 
@@ -205,7 +206,6 @@ const MainMenu: React.FC = () => {
 
     prefetchInitialRound();
   };
-
 
   const handleLeaderboard = async () => {
     setShowLeaderboard(true);
@@ -225,6 +225,19 @@ const MainMenu: React.FC = () => {
   const closeLeaderboard = () => {
     setShowLeaderboard(false);
     setLeaderboardData([]);
+  };
+
+  const handleCredits = () => {
+    setShowCredits(true);
+  };
+
+  const closeCredits = () => {
+    setShowCredits(false);
+  };
+
+  const handleLicences = () => {
+    setShowCredits(false);
+    navigation.navigate('Licences');
   };
 
   // const startTransition = () => {
@@ -321,13 +334,20 @@ const MainMenu: React.FC = () => {
         <TouchableOpacity style={styles.button} onPress={handleStartGame}>
           <Text style={styles.buttonText}>Start Game</Text>
         </TouchableOpacity>
-       <TouchableOpacity style={styles.aiButton} onPress={handleStartAiGame}>
+        <TouchableOpacity style={styles.aiButton} onPress={handleStartAiGame}>
           <Text style={styles.buttonText}>Play vs AI</Text>
-        </TouchableOpacity> 
-        <TouchableOpacity style={styles.leaderboardButton} onPress={handleLeaderboard}>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.leaderboardButton}
+          onPress={handleLeaderboard}
+        >
           <Text style={styles.buttonText}>Leaderboard</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity style={styles.creditsButton} onPress={handleCredits}>
+        <Text style={styles.creditsButtonText}>Credits</Text>
+      </TouchableOpacity>
 
       {/* Leaderboard Modal */}
       <Modal
@@ -380,6 +400,56 @@ const MainMenu: React.FC = () => {
                 onPress={closeLeaderboard}
               >
                 <Text style={leaderboardStyles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Credits Modal */}
+      <Modal
+        visible={showCredits}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closeCredits}
+      >
+        <View style={creditsStyles.modalContainer}>
+          <View style={creditsStyles.creditsBox}>
+            <Text style={creditsStyles.creditsTitle}>Credits</Text>
+
+            <ScrollView style={creditsStyles.scrollContainer}>
+              <View style={creditsStyles.contentContainer}>
+                <Text style={creditsStyles.creditsText}>
+                  Images provided via Mapillary, licensed under CC-BY-SA.
+                  {'\n'}
+                  Map data provided by OpenStreetMap, licensed under ODbL.
+                  {'\n'}
+                  Fallback map data provided by BigDataCloud, Geocode.xyz, and
+                  Geonames (CC-BY-SA)
+                  {'\n'}
+                  {'\n'}
+                  AI models used for AI 1v1 provided by OpenRouter:
+                  {'\n'}- Mistral-Small-3.2-24B-Instruct licensed under
+                  Apache-2.0 (see licenses)
+                  {'\n'}- Llama-4-Scout: Llama 4 is licensed under the Llama 4
+                  Community License, Copyright © Meta Platforms, Inc. All Rights
+                  Reserved. (see licenses)
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={creditsStyles.buttonContainer}>
+              <TouchableOpacity
+                style={creditsStyles.closeButton}
+                onPress={closeCredits}
+              >
+                <Text style={creditsStyles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={creditsStyles.closeButton}
+                onPress={handleLicences}
+              >
+                <Text style={creditsStyles.closeButtonText}>Licences</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -450,6 +520,22 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  creditsButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  creditsButtonText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 
@@ -534,6 +620,62 @@ const leaderboardStyles = StyleSheet.create({
     width: '100%',
     marginTop: 20,
     alignItems: 'center',
+  },
+  closeButton: {
+    width: '60%',
+    borderRadius: 25,
+    backgroundColor: 'rgba(231, 46, 46, 1)',
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    color: 'rgba(255,255,255,1)',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
+
+const creditsStyles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
+  creditsBox: {
+    backgroundColor: 'rgba(30,30,30,1)',
+    padding: 20,
+    borderRadius: 10,
+    width: '90%',
+    maxHeight: '80%',
+    alignItems: 'center',
+  },
+  creditsTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'rgba(255, 215, 0, 1)',
+    marginBottom: 20,
+  },
+  scrollContainer: {
+    width: '100%',
+    maxHeight: 400,
+  },
+  contentContainer: {
+    width: '100%',
+    paddingHorizontal: 10,
+  },
+  creditsText: {
+    color: 'rgba(255,255,255,1)',
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 20,
+    width: '100%',
   },
   closeButton: {
     width: '60%',

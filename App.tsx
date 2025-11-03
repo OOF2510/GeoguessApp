@@ -4,9 +4,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import MainMenu from './MainMenu';
 import GameScreen from './GameScreen';
 import AiDuel from './AiDuel';
+import Licences from './Licences';
 import { RootStackParamList } from './navigationTypes';
 import { initializeFirebase } from './firebase';
-import { initAppCheck } from './leaderAuthUtils'
+import { initAppCheck } from './leaderAuthUtils';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -29,6 +30,7 @@ const App: React.FC = () => {
         <Stack.Screen name="MainMenu" component={MainMenu} />
         <Stack.Screen name="Game" component={GameScreen} />
         <Stack.Screen name="AiDuel" component={AiDuel} />
+        <Stack.Screen name="Licences" component={Licences} />
       </Stack.Navigator>
     </NavigationContainer>
   );
