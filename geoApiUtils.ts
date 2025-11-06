@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { geoApiClient } from './leaderAuthUtils';
 
 export interface ImageResult {
   url: string;
@@ -33,15 +33,7 @@ interface ApiResponse {
 
 async function getImageWithCountry(): Promise<PrefetchedRound | null> {
   try {
-    const response = await axios.get<ApiResponse>(
-      'https://geo.api.oof2510.space/getImage',
-      {
-        timeout: 15000,
-        headers: { 'User-Agent': 'geoguessr-app/1.0' },
-      },
-    );
-
-    const data = response.data;
+    const data = (await geoApiClient.getImage()) as ApiResponse;
     if (!data || !data.imageUrl || !data.coordinates) {
       throw new Error('Invalid API response');
     }

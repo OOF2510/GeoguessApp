@@ -1,10 +1,12 @@
-import axios from 'axios';
 import { Platform } from 'react-native';
 import appCheck from '@react-native-firebase/app-check';
 import { decode } from 'base-64';
 import { initializeFirebase } from './firebase';
+import GeoApi from '@oof2510/geoapi';
 
 const API_BASE_URL = 'https://geo.api.oof2510.space';
+
+export const geoApiClient = new GeoApi(API_BASE_URL);
 
 let appCheckToken = '';
 let appCheckTokenExpiry = 0;
@@ -41,6 +43,7 @@ export const initAppCheck = async () => {
       appCheckToken = appCheckTokenResult.token;
       // Parse expiry from JWT token
       appCheckTokenExpiry = getTokenExpiry(appCheckToken);
+      geoApiClient.setAppCheckToken(appCheckToken);
     }
   } catch (error) {
     console.error('Error initializing App Check:', error);
@@ -52,6 +55,9 @@ const getValidToken = async (): Promise<string> => {
   if (!appCheckToken || Date.now() >= appCheckTokenExpiry) {
     await initAppCheck();
   }
+  if (appCheckToken) {
+    geoApiClient.setAppCheckToken(appCheckToken);
+  }
   return appCheckToken;
 };
 
@@ -62,17 +68,8 @@ export const startGameSession = async (): Promise<{
   expiresAt: string;
 }> => {
   const token = await getValidToken();
-  const response = await axios.post(
-    `${API_BASE_URL}/game/start`,
-    {},
-    {
-      headers: {
-        'X-Firebase-AppCheck': token,
-      },
-      timeout: 15000,
-    },
-  );
-  return response.data;
+  geoApiClient.setAppCheckToken(token || null);
+  return geoApiClient.startGame();
 };
 
 export const submitScore = async (
@@ -81,15 +78,8 @@ export const submitScore = async (
   metadata: Record<string, any> = {},
 ): Promise<void> => {
   const token = await getValidToken();
-  await axios.post(
-    `${API_BASE_URL}/game/submit`,
-    { gameSessionId, score, metadata },
-    {
-      headers: {
-        'X-Firebase-AppCheck': token,
-      },
-    },
-  );
+  geoApiClient.setAppCheckToken(token || null);
+  await geoApiClient.submitScore(gameSessionId, score, metadata);
 };
 
 export const getLeaderboard = async (
@@ -101,10 +91,7 @@ export const getLeaderboard = async (
     createdAt: string;
   }>
 > => {
-  const response = await axios.get(`${API_BASE_URL}/leaderboard/top`, {
-    params: { limit },
-  });
-  return response.data;
+  return geoApiClient.getLeaderboard(limit);
 };
 
 export const getAppCheckToken = getValidToken;

@@ -1,7 +1,4 @@
-import axios, { AxiosError } from 'axios';
-import { getAppCheckToken } from './leaderAuthUtils';
-
-export const API_BASE_URL = 'https://geo.api.oof2510.space';
+import { geoApiClient, getAppCheckToken } from './leaderAuthUtils';
 
 export interface AiDuelScores {
   player: number;
@@ -74,61 +71,52 @@ export interface AiDuelApiError extends Error {
   payload?: unknown;
 }
 
-const REQUEST_TIMEOUT_MS = 15000;
-
-const withAppCheckHeaders = async (): Promise<Record<string, string>> => {
-  const token = await getAppCheckToken();
-  return token
-    ? {
-        'X-Firebase-AppCheck': token,
-      }
-    : {};
-};
-
 const buildApiError = (
   error: unknown,
   fallbackMessage: string,
 ): AiDuelApiError => {
-  if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<any>;
-    const payload = axiosError.response?.data ?? null;
-    const messageFromPayload = (payload &&
-      (payload.errorDescription || payload.error || payload.message)) as
-      | string
-      | undefined;
+  if (error && typeof error === 'object') {
+    const baseMessage = (error as Error).message || fallbackMessage;
+    const apiError: AiDuelApiError = new Error(baseMessage);
 
-    const apiError: AiDuelApiError = new Error(
-      messageFromPayload || fallbackMessage,
-    );
-    apiError.status = axiosError.response?.status;
+    const status = (error as { status?: unknown }).status;
+    if (typeof status === 'number') {
+      apiError.status = status;
+    }
+
+    const original = (error as { original?: unknown }).original;
+    const payload =
+      (original &&
+        typeof original === 'object' &&
+        'response' in original &&
+        (original as any).response?.data) ??
+      (error as { payload?: unknown }).payload ??
+      null;
+
     if (payload && typeof payload === 'object') {
       const maybeCode = (payload as Record<string, unknown>).error;
       if (typeof maybeCode === 'string') {
         apiError.code = maybeCode;
       }
-      const nestedPayload =
+      apiError.payload =
         (payload as Record<string, unknown>).payload ?? payload;
-      apiError.payload = nestedPayload;
     }
+
+    if (!apiError.message) {
+      apiError.message = fallbackMessage;
+    }
+
     return apiError;
   }
 
-  const apiError: AiDuelApiError = new Error(fallbackMessage);
-  return apiError;
+  return new Error(fallbackMessage) as AiDuelApiError;
 };
 
 export const startAiMatch = async (): Promise<AiDuelMatchResponse> => {
   try {
-    const headers = await withAppCheckHeaders();
-    const response = await axios.post<AiDuelMatchResponse>(
-      `${API_BASE_URL}/ai-duel/start`,
-      {},
-      {
-        headers,
-        timeout: REQUEST_TIMEOUT_MS,
-      },
-    );
-    return response.data;
+    const token = await getAppCheckToken();
+    geoApiClient.setAppCheckToken(token || null);
+    return await geoApiClient.startAiDuel();
   } catch (error) {
     throw buildApiError(error, 'Failed to start AI duel');
   }
@@ -140,16 +128,9 @@ export const submitAiGuess = async (
   guess: string,
 ): Promise<AiDuelGuessResponse> => {
   try {
-    const headers = await withAppCheckHeaders();
-    const response = await axios.post<AiDuelGuessResponse>(
-      `${API_BASE_URL}/ai-duel/guess`,
-      { matchId, roundIndex, guess },
-      {
-        headers,
-        timeout: REQUEST_TIMEOUT_MS,
-      },
-    );
-    return response.data;
+    const token = await getAppCheckToken();
+    geoApiClient.setAppCheckToken(token || null);
+    return await geoApiClient.submitAiGuess(matchId, roundIndex, guess);
   } catch (error) {
     throw buildApiError(error, 'Failed to submit AI guess');
   }
