@@ -75,7 +75,9 @@ const Licences: React.FC = () => {
             For more details: {renderLink('https://www.apache.org/licenses/LICENSE-2.0')}{'\n'}
             {'\n'}
             - Llama-4-Scout: Llama 4 is licensed under the Llama 4 Community License, Copyright © Meta Platforms, Inc. All Rights Reserved.{'\n'}
-            For more details: {renderLink('https://llama.meta.com/llama4/use-policy')}
+            For more details: {renderLink('https://llama.meta.com/llama4/use-policy')}{'\n'}
+            {'\n'}
+            - Polaris Alpha: {renderLink('https://openrouter.ai/openrouter/polaris-alpha')}
           </Text>
         </View>
 
