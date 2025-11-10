@@ -76,10 +76,10 @@ jobs:
       - name: Update Android version
         run: |
           echo "Updating versionCode to ${{ steps.version-info.outputs.version_code }} and versionName to ${{ steps.version-info.outputs.version }}"
-          # Update versionCode - handle spaces and tabs around the equal sign
-          sed -i -E "s/(versionCode\s*=\s*)[0-9]+/\1${{ steps.version-info.outputs.version_code }}/" android/app/build.gradle
-          # Update versionName - handle spaces and tabs around the equal sign
-          sed -i -E 's/(versionName\s*=\s*)"[^"]*"/\1"${{ steps.version-info.outputs.version }}"/' android/app/build.gradle
+          # Update versionCode - handle optional equals sign and whitespace
+          sed -i -E "s/(versionCode\s*(=\s*)?)[0-9]+/\1${{ steps.version-info.outputs.version_code }}/" android/app/build.gradle
+          # Update versionName - handle optional equals sign and whitespace
+          sed -i -E "s/(versionName\s*(=\s*)?)\"[^\"]*\"/\1\"${{ steps.version-info.outputs.version }}\"/" android/app/build.gradle
           # Verify the changes were made
           echo "Updated build.gradle with version ${{ steps.version-info.outputs.version }} and code ${{ steps.version-info.outputs.version_code }}"
           echo "Current build.gradle version settings:"
