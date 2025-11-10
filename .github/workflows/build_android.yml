@@ -114,8 +114,13 @@ jobs:
             # IMPORTANT: Make release code outrank any dev code from the previous version
             VERSION_CODE=$((BASE_CODE * 1000))
           else
-            # Dev / untagged build — use tag + commit count
-            VERSION="$LAST_TAG+$COMMITS_SINCE_TAG-beta"
+            # Dev / untagged build — ensure a single -beta suffix, then add commit metadata
+            DEV_VERSION_BASE="$LAST_TAG"
+            if [[ "$DEV_VERSION_BASE" != *-* ]]; then
+              DEV_VERSION_BASE="$DEV_VERSION_BASE-beta"
+            fi
+
+            VERSION="$DEV_VERSION_BASE+$COMMITS_SINCE_TAG"
             IFS='.' read -r major minor patch <<< "$LAST_TAG"
             patch="${patch%%-*}"
             BASE_CODE=$((major * 10000 + minor * 100 + patch))
