@@ -48,7 +48,7 @@ jobs:
         run: |
           set -e
 
-          # Find the latest tag (e.g. v1.3.4)
+          # Find the latest tag (e.g. v1.3.4 or v1.3.4-beta)
           RAW_LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           LAST_TAG=${RAW_LAST_TAG#v}
 
@@ -60,27 +60,59 @@ jobs:
           REF_NAME="${{ github.ref_name }}"
           TAG_REF=""
 
+          # Helper: choose a stable tag (vX.Y.Z) if available among tags pointing at a SHA
+          choose_tag_for_sha() {
+            local sha="$1"
+            # All tags pointing at this SHA
+            local all_tags
+            all_tags=$(git tag --points-at "$sha" | sed 's/^v//')
+
+            # Prefer stable semver tags (no pre-release suffix)
+            local stable
+            stable=$(echo "$all_tags" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+            if [ -n "$stable" ]; then
+              echo "v$stable"
+              return
+            fi
+
+            # Fallback to any tag (first one)
+            local any
+            any=$(echo "$all_tags" | head -n 1 || true)
+            if [ -n "$any" ]; then
+              echo "v$any"
+              return
+            fi
+
+            echo ""
+          }
+
           if [[ "$REF" == refs/tags/* ]]; then
             TAG_REF="$REF_NAME"
           elif [[ "$EVENT_NAME" == "release" ]]; then
             TAG_REF="${{ github.event.release.tag_name }}"
           elif [[ "$EVENT_NAME" == "workflow_run" ]]; then
-            TAG_REF=$(git tag --points-at "${{ github.sha }}" | grep -E '^v' | head -n 1 || true)
+            # Use the workflow_run's head_sha to find the tag
+            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+            FOUND_TAG="$(choose_tag_for_sha "$HEAD_SHA")"
+            TAG_REF="${FOUND_TAG#v}"
+            # Re-add leading v for consistency
+            if [ -n "$TAG_REF" ]; then TAG_REF="v$TAG_REF"; fi
           fi
 
           if [[ "$EVENT_NAME" == "workflow_run" && -z "$TAG_REF" ]]; then
-            echo "workflow_run triggered but no tag found on commit ${{ github.sha }}"
+            echo "workflow_run triggered but no tag found on head SHA ${{ github.event.workflow_run.head_sha }}"
             exit 1
           fi
 
           if [[ -n "$TAG_REF" ]]; then
             # Tagged or release build — exact version from tag
-            VERSION="$TAG_REF"
-            VERSION="${VERSION#v}"
+            VERSION="${TAG_REF#v}"              # e.g. 1.3.5 or 1.3.5-beta
             IFS='.' read -r major minor patch <<< "$VERSION"
-            patch="${patch%%-*}"
+            patch="${patch%%-*}"                # strip pre-release suffix if present for code math
             BASE_CODE=$((major * 10000 + minor * 100 + patch))
-            VERSION_CODE=$BASE_CODE
+
+            # IMPORTANT: Make release code outrank any dev code from the previous version
+            VERSION_CODE=$((BASE_CODE * 1000))
           else
             # Dev / untagged build — use tag + commit count
             VERSION="$LAST_TAG+$COMMITS_SINCE_TAG-beta"
