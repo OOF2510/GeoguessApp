@@ -673,12 +673,13 @@ const creditsStyles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     marginTop: 20,
     width: '100%',
+    paddingHorizontal: 10,
   },
   closeButton: {
-    width: '60%',
+    width: '48%',
     borderRadius: 25,
     backgroundColor: 'rgba(231, 46, 46, 1)',
     paddingVertical: 12,

@@ -2,15 +2,12 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
   pull_request:
     branches:
       - main
   release:
     types:
       - published
-  workflow_dispatch:
 
 jobs:
   android:
@@ -40,37 +37,40 @@ jobs:
       - name: Extract version info
         id: version-info
         run: |
-          if [ "${{ github.event_name }}" == "release" ]; then
-            # Use tag name for releases (e.g., v1.2.0 -> 1.2.0)
-            VERSION="${{ github.event.release.tag_name }}"
-            VERSION="${VERSION#v}"  # Remove leading 'v' if present
+          set -e
 
-            # Generate version code from tag (e.g., 1.2.0 -> 10200)
-            IFS='.' read -r major minor patch <<< "$VERSION"
-            # Remove any non-numeric suffix (e.g., -beta)
-            patch="${patch%%-*}"
-            VERSION_CODE=$((major * 10000 + minor * 100 + patch))
-          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            # Tag push (e.g., v1.2.0 -> 1.2.0)
+          # Find the latest tag (e.g. v1.3.4)
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          LAST_TAG=${LAST_TAG#v}
+
+          # Count commits since the last tag
+          COMMITS_SINCE_TAG=$(git rev-list "${LAST_TAG}"..HEAD --count 2>/dev/null || echo "0")
+
+          if [[ "${{ github.ref }}" == refs/tags/v* ]] || [ "${{ github.event_name }}" == "release" ]; then
+            # Tagged or release build — exact version from tag
             VERSION="${{ github.ref_name }}"
-            VERSION="${VERSION#v}"  # Remove leading 'v' if present
-
-            # Generate version code from tag (e.g., 1.2.0 -> 10200)
+            VERSION="${VERSION#v}"
             IFS='.' read -r major minor patch <<< "$VERSION"
-            # Remove any non-numeric suffix (e.g., -beta)
             patch="${patch%%-*}"
-            VERSION_CODE=$((major * 10000 + minor * 100 + patch))
+            BASE_CODE=$((major * 10000 + minor * 100 + patch))
+            VERSION_CODE=$BASE_CODE
           else
-            # Use package.json version for non-release builds
-            VERSION=$(node -p "require('./package.json').version")
-            VERSION_CODE=1
+            # Dev / untagged build — use tag + commit count
+            VERSION="$LAST_TAG+$COMMITS_SINCE_TAG-beta"
+            IFS='.' read -r major minor patch <<< "$LAST_TAG"
+            patch="${patch%%-*}"
+            BASE_CODE=$((major * 10000 + minor * 100 + patch))
+            VERSION_CODE=$((BASE_CODE * 1000 + COMMITS_SINCE_TAG))
           fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION, Version Code: $VERSION_CODE"
+          echo "Last tag: $LAST_TAG"
+          echo "Commits since tag: $COMMITS_SINCE_TAG"
+          echo "Version: $VERSION"
+          echo "Version Code: $VERSION_CODE"
 
-      - name: Update Android version on release
-        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+      - name: Update Android version
         run: |
           sed -i "s/versionCode [0-9]*/versionCode ${{ steps.version-info.outputs.version_code }}/" android/app/build.gradle
           sed -i "s/versionName \".*\"/versionName \"${{ steps.version-info.outputs.version }}\"/" android/app/build.gradle
@@ -158,6 +158,24 @@ jobs:
       - name: Display AAB Signing Certificate Information
         run: |
           jarsigner -verify -verbose -certs android/app/build/outputs/bundle/release/app-release.aab
+      - name: Upload AAB to Google Play Alpha
+        if: github.event_name == 'release'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: space.oof2510.geoguess
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: alpha
+          status: completed
+      - name: Upload AAB to Google Play Internal
+        if: github.event_name == 'push'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: space.oof2510.geoguess
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: draft
       - name: Download Bundletool
         run: |
           BUNDLETOOL_VERSION=1.17.2

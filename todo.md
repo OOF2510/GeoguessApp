@@ -1,0 +1,3 @@
+- ~~fix licenses button~~
+- ~~fix summary modal button text~~
+- highlight user scores on leaderboard

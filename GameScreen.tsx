@@ -323,6 +323,7 @@ const GameScreen: React.FC = () => {
       color: '#FFFFFF',
       fontSize: 16,
       fontWeight: 'bold',
+      textAlign: 'center',
     },
     feedback: {
       fontSize: 16,
@@ -561,7 +562,9 @@ const GameScreen: React.FC = () => {
                   onPress={continueGame}
                 >
                   <Text style={styles.buttonText}>
-                    Continue Game (10 more rounds)
+                    Continue Game
+                    {'\n'}
+                    (10 more rounds)
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -608,7 +611,9 @@ const GameScreen: React.FC = () => {
                   onPress={handleReturnToMainMenu}
                 >
                   <Text style={styles.buttonText}>
-                    Return to Main Menu (Submit to Leaderboard)
+                    Return to Main Menu
+                    {'\n'}
+                    (Submit to Leaderboard)
                   </Text>
                 </TouchableOpacity>
               </View>
