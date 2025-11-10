@@ -65,15 +65,21 @@ jobs:
           echo "__Patch Notes:__" >> release_body.md
           cat commits.txt >> release_body.md
           echo "" >> release_body.md
-          echo "Submitting to google play very soon!" >> release_body.md
+          echo "Currently in Google Play Closed Testing - you can join the testing program to get early access!" >> release_body.md
           echo "" >> release_body.md
-          echo "__How to Update/Install Right Now:__" >> release_body.md
+          echo "__How to join the testing program:__" >> release_body.md
+          echo "1. Join [this Google Group](https://groups.google.com/g/geofindertesters)" >> release_body.md
+          echo "2. Join [the Google Play Closed Testing program](https://play.google.com/apps/testing/space.oof2510.geoguess)" >> release_body.md
+          echo "3. Go to the [Play Store page for the app](https://play.google.com/store/apps/details?id=space.oof2510.geoguess) and Install!" >> release_body.md
+          echo "" >> release_body.md
+          echo "__How to Install (APK):__" >> release_body.md
           echo "" >> release_body.md
           echo "- Download [GeoFinder ${{ steps.version-info.outputs.tag }}.apk](https://github.com/OOF2510/GeoguessApp/releases/download/${{ steps.version-info.outputs.tag }}/Geofinder-${{ steps.version-info.outputs.version }}.apk)" >> release_body.md
           echo "- Open the APK file" >> release_body.md
           echo "- *Allow installing from unknown sources if prompted*" >> release_body.md
           echo "- *Scan with play protect if prompted*" >> release_body.md
           echo "- Click **\"Install\"**" >> release_body.md
+          echo "*Note: The Github release builds use a different signing key than the Play Store version, so you cannot install the app directly from the APK without first uninstalling the Play Store version, or vice versa.*" >> release_body.md
 
       - name: Create GitHub Release
         id: create_release
