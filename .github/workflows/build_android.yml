@@ -40,11 +40,11 @@ jobs:
           set -e
 
           # Find the latest tag (e.g. v1.3.4)
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          LAST_TAG=${LAST_TAG#v}
+          RAW_LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          LAST_TAG=${RAW_LAST_TAG#v}
 
           # Count commits since the last tag
-          COMMITS_SINCE_TAG=$(git rev-list "${LAST_TAG}"..HEAD --count 2>/dev/null || echo "0")
+          COMMITS_SINCE_TAG=$(git rev-list "${RAW_LAST_TAG}"..HEAD --count 2>/dev/null || echo "0")
 
           if [[ "${{ github.ref }}" == refs/tags/v* ]] || [ "${{ github.event_name }}" == "release" ]; then
             # Tagged or release build — exact version from tag
