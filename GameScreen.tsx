@@ -626,6 +626,7 @@ const GameScreen: React.FC = () => {
                           'Success',
                           'Score submitted to leaderboard! Starting fresh game...',
                         );
+                        setIsContinued(false);
                         initializeGameSession();
                       } catch (error) {
                         console.error('Error submitting score:', error);
@@ -643,7 +644,7 @@ const GameScreen: React.FC = () => {
                       setCurrentScore(0);
                       setCorrectAnswers(0);
                       setCompletedRounds(0);
-                      setRoundNumber(1);
+                      setIsContinued(false);
                       initializeGameSession();
                     }
                   }}
