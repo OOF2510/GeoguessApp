@@ -1,3 +1,2 @@
 - highlight user scores on leaderboard
-- change scoring to double or nothing if continued
 - double tap to zoom in/out on image

@@ -59,6 +59,7 @@ const GameScreen: React.FC = () => {
   const [gameSessionId, setGameSessionId] = useState<string | null>(null);
   const summaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [submitToLeaderboard, setSubmitToLeaderboard] = useState<boolean>(true);
+  const [isContinued, setIsContinued] = useState<boolean>(false);
 
   const clearSummaryTimeout = (): void => {
     cancelSummaryModal(summaryTimeoutRef);
@@ -188,6 +189,10 @@ const GameScreen: React.FC = () => {
             coordStr ? ' ' + coordStr : ''
           }`,
         );
+        if (isContinued) {
+          const newScore = currentScore - 1;
+          setCurrentScore(newScore);
+        }
         setGameOver(true);
       } else {
         setFeedback(`❌ Not quite. Try again! (Guess ${newGuessCount}/3)`);
@@ -216,7 +221,8 @@ const GameScreen: React.FC = () => {
     setRoundNumber(1);
     setCompletedRounds(0);
     setShowGameSummary(false);
-    initializeGameSession();
+    setIsContinued(true);
+    startGame();
   };
 
   const storeGameSessionId = async (id: string): Promise<void> => {
@@ -598,7 +604,7 @@ const GameScreen: React.FC = () => {
                   <Text style={styles.buttonText}>
                     Continue Game
                     {'\n'}
-                    (Keep score and play more)
+                    (Lose points if you guess wrong)
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -620,7 +626,7 @@ const GameScreen: React.FC = () => {
                           'Success',
                           'Score submitted to leaderboard! Starting fresh game...',
                         );
-                        startGame();
+                        initializeGameSession();
                       } catch (error) {
                         console.error('Error submitting score:', error);
                         Alert.alert(
@@ -638,7 +644,7 @@ const GameScreen: React.FC = () => {
                       setCorrectAnswers(0);
                       setCompletedRounds(0);
                       setRoundNumber(1);
-                      startGame();
+                      initializeGameSession();
                     }
                   }}
                 >
