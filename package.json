@@ -12,7 +12,7 @@
     "prettier": "prettier --write ."
   },
   "dependencies": {
-    "@oof2510/geoapi": "^1.0.2",
+    "@oof2510/geoapi": "^1.1.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-firebase/app": "^23.4.1",
     "@react-native-firebase/app-check": "^23.4.1",
