@@ -89,6 +89,7 @@ export const getLeaderboard = async (
     rank: number;
     score: number;
     createdAt: string;
+    gameSessionId: string | null;
   }>
 > => {
   return geoApiClient.getLeaderboard(limit);

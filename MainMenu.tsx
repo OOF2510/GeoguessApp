@@ -19,6 +19,7 @@ import RNFS from 'react-native-fs';
 import { getLeaderboard } from './leaderAuthUtils';
 import { getImageWithCountry } from './geoApiUtils';
 import type { PrefetchedRound } from './geoApiUtils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // const { width: screenWidth } = Dimensions.get('window');
 const backgroundImages: ImageSourcePropType[] = [
@@ -49,6 +50,7 @@ const MainMenu: React.FC = () => {
       rank: number;
       score: number;
       createdAt: string;
+      gameSessionId: string | null;
     }>
   >([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
@@ -57,6 +59,9 @@ const MainMenu: React.FC = () => {
     useState<PrefetchedRound | null>(null);
   const isPrefetchingRef = useRef(false);
   const prefetchedRoundRef = useRef<PrefetchedRound | null>(null);
+  const [userGameSessionIds, setUserGameSessionIds] = useState<Set<string>>(
+    () => new Set<string>(),
+  );
 
   // Preload images on component mount
   useEffect(() => {
@@ -104,6 +109,29 @@ const MainMenu: React.FC = () => {
   useEffect(() => {
     prefetchedRoundRef.current = prefetchedRound;
   }, [prefetchedRound]);
+
+  const loadUserGameSessionIds = useCallback(async (): Promise<Set<string>> => {
+    try {
+      const stored = await AsyncStorage.getItem('gameSessionIds');
+      if (!stored) {
+        return new Set<string>();
+      }
+
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) {
+        return new Set<string>();
+      }
+
+      const normalized = parsed.filter(
+        (value: unknown): value is string =>
+          typeof value === 'string' && value.trim().length > 0,
+      );
+      return new Set<string>(normalized);
+    } catch (error) {
+      console.error('Failed to load cached game session IDs:', error);
+      return new Set<string>();
+    }
+  }, []);
 
   const loadCachedImages = async () => {
     try {
@@ -211,12 +239,17 @@ const MainMenu: React.FC = () => {
     setShowLeaderboard(true);
     setLoadingLeaderboard(true);
     try {
-      const data = await getLeaderboard(50);
+      const [data, sessionIds] = await Promise.all([
+        getLeaderboard(50),
+        loadUserGameSessionIds(),
+      ]);
+      setUserGameSessionIds(new Set<string>(sessionIds));
       setLeaderboardData(data);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
       // Still show the modal but with empty data
       setLeaderboardData([]);
+      setUserGameSessionIds(new Set<string>());
     } finally {
       setLoadingLeaderboard(false);
     }
@@ -225,6 +258,7 @@ const MainMenu: React.FC = () => {
   const closeLeaderboard = () => {
     setShowLeaderboard(false);
     setLeaderboardData([]);
+    setUserGameSessionIds(new Set<string>());
   };
 
   const handleCredits = () => {
@@ -369,19 +403,39 @@ const MainMenu: React.FC = () => {
               </View>
             ) : leaderboardData.length > 0 ? (
               <ScrollView style={leaderboardStyles.scrollContainer}>
-                {leaderboardData.map((entry, index) => (
-                  <View key={index} style={leaderboardStyles.leaderboardEntry}>
-                    <Text style={leaderboardStyles.rankText}>
-                      #{entry.rank}
-                    </Text>
-                    <Text style={leaderboardStyles.scoreText}>
-                      {entry.score} pts
-                    </Text>
-                    <Text style={leaderboardStyles.dateText}>
-                      {new Date(entry.createdAt).toLocaleDateString()}
-                    </Text>
-                  </View>
-                ))}
+                {leaderboardData.map((entry, index) => {
+                  const isUserScore = Boolean(
+                    entry.gameSessionId &&
+                      userGameSessionIds.has(entry.gameSessionId),
+                  );
+
+                  return (
+                    <View
+                      key={index}
+                      style={[
+                        leaderboardStyles.leaderboardEntry,
+                        isUserScore && leaderboardStyles.leaderboardEntryHighlight,
+                      ]}
+                    >
+                      <Text style={leaderboardStyles.rankText}>
+                        #{entry.rank}
+                      </Text>
+                      <Text style={leaderboardStyles.scoreText}>
+                        {entry.score} pts
+                      </Text>
+                      <View style={leaderboardStyles.entryMeta}>
+                        <Text style={leaderboardStyles.dateText}>
+                          {new Date(entry.createdAt).toLocaleDateString()}
+                        </Text>
+                        {isUserScore ? (
+                          <View style={leaderboardStyles.userBadge}>
+                            <Text style={leaderboardStyles.userBadgeText}>You</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </View>
+                  );
+                })}
               </ScrollView>
             ) : (
               <View style={leaderboardStyles.emptyContainer}>
@@ -574,6 +628,11 @@ const leaderboardStyles = StyleSheet.create({
     backgroundColor: 'rgba(42,42,42,1)',
     borderRadius: 8,
   },
+  leaderboardEntryHighlight: {
+    borderWidth: 1,
+    borderColor: 'rgba(76,175,80,0.6)',
+    backgroundColor: 'rgba(46, 125, 50, 0.2)',
+  },
   rankText: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -587,11 +646,29 @@ const leaderboardStyles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
+  entryMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   dateText: {
     fontSize: 12,
     color: 'rgba(136,136,136,1)',
     minWidth: 80,
     textAlign: 'right',
+  },
+  userBadge: {
+    backgroundColor: 'rgba(76,175,80,0.25)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(76,175,80,0.6)',
+    marginLeft: 8,
+  },
+  userBadgeText: {
+    color: 'rgba(199, 234, 211, 1)',
+    fontSize: 12,
+    fontWeight: '700',
   },
   loadingContainer: {
     alignItems: 'center',
