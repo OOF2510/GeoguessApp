@@ -483,11 +483,12 @@ const MainMenu: React.FC = () => {
                   {'\n'}
                   {'\n'}
                   AI models used for AI 1v1 provided by OpenRouter:
-                  {'\n'}- Mistral-Small-3.2-24B-Instruct licensed under
+                  {'\n'}- Mistral-Small-3.2-24B-Instruct: licensed under
                   Apache-2.0 (see licenses)
                   {'\n'}- Llama-4-Scout: Llama 4 is licensed under the Llama 4
                   Community License, Copyright © Meta Platforms, Inc. All Rights
                   Reserved. (see licenses)
+                  {'\n'}- Polaris Alpha: Cloaked model provided by OpenRouter
                 </Text>
               </View>
             </ScrollView>
