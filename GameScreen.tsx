@@ -220,11 +220,26 @@ const GameScreen: React.FC = () => {
     initializeGameSession();
   };
 
+  const storeGameSessionId = async (id: string): Promise<void> => {
+    try {
+      const existing = await AsyncStorage.getItem('gameSessionIds');
+      const parsed: string[] = existing ? JSON.parse(existing) : [];
+      // Avoid duplicates while keeping this id as the most recent
+      if (!parsed.includes(id)) {
+        parsed.push(id);
+      }
+      await AsyncStorage.setItem('gameSessionIds', JSON.stringify(parsed));
+    } catch (error) {
+      console.error('Failed to cache game session id:', error);
+    }
+  };
+
   const initializeGameSession = async (): Promise<void> => {
     setLoading(true);
     try {
       const session = await startGameSession();
       setGameSessionId(session.gameSessionId);
+      await storeGameSessionId(session.gameSessionId);
       console.log('Game session started:', session.gameSessionId);
       await startGame();
     } catch (error) {
