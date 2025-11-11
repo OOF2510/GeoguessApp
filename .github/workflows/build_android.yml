@@ -130,10 +130,73 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           echo "tag_ref=$TAG_REF" >> $GITHUB_OUTPUT
+          echo "last_tag_raw=$RAW_LAST_TAG" >> $GITHUB_OUTPUT
+          echo "commits_since_tag=$COMMITS_SINCE_TAG" >> $GITHUB_OUTPUT
           echo "Last tag: $LAST_TAG"
           echo "Commits since tag: $COMMITS_SINCE_TAG"
           echo "Version: $VERSION"
           echo "Version Code: $VERSION_CODE"
+
+      - name: Generate Release Notes (en-US)
+        id: release-notes
+        run: |
+          set -euo pipefail
+
+          LAST_TAG_RAW="${{ steps.version-info.outputs.last_tag_raw }}"
+          TAG_REF="${{ steps.version-info.outputs.tag_ref }}"
+          VERSION="${{ steps.version-info.outputs.version }}"
+
+          REPO_SLUG="${GITHUB_REPOSITORY}"
+
+          # Determine git range
+          if git rev-parse -q --verify "$LAST_TAG_RAW" >/dev/null 2>&1; then
+            RANGE="$LAST_TAG_RAW..HEAD"
+            COMPARE_BASE="$LAST_TAG_RAW"
+          else
+            FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD | tail -n1)
+            RANGE="$FIRST_COMMIT..HEAD"
+            COMPARE_BASE="$FIRST_COMMIT"
+          fi
+
+          # Collect commit subjects (exclude merges)
+          mapfile -t LINES < <(git log --no-merges --pretty=format:%s $RANGE)
+
+          summaries=()
+          for s in "${LINES[@]}"; do
+            # Basic cleanup of common prefixes
+            s="${s%.*}"
+            s="${s#feat: }"; s="${s#fix: }"; s="${s#perf: }"; s="${s#refactor: }"; s="${s#chore: }"; s="${s#docs: }"; s="${s#build: }"; s="${s#ci: }"
+            [[ -z "$s" ]] && continue
+            [[ "$s" == Merge\ * ]] && continue
+            summaries+=("$s")
+          done
+
+          DATE_UTC=$(date -u +'%b %d, %Y')
+          HEADER="Geofinder ${VERSION}"
+          BODY=""
+          count=0
+          for s in "${summaries[@]}"; do
+            BODY+="- ${s}\n"
+            count=$((count+1))
+            [[ $count -ge 20 ]] && break
+          done
+          if [[ -z "$BODY" ]]; then
+            BODY="- Stability and performance improvements\n"
+          fi
+
+          COMPARE_URL="https://github.com/${REPO_SLUG}/compare/${COMPARE_BASE}...${TAG_REF:-HEAD}"
+          TEXT="${HEADER}\n\n${BODY}\nFull changelog: ${COMPARE_URL}"
+
+          MAX=500
+          if [ ${#TEXT} -gt $MAX ]; then
+            TEXT="${TEXT:0:497}..."
+          fi
+
+          mkdir -p .release-notes
+          printf "%s\n" "$TEXT" > .release-notes/en-US.txt
+
+          echo "path=.release-notes" >> "$GITHUB_OUTPUT"
+          echo "file=.release-notes/en-US.txt" >> "$GITHUB_OUTPUT"
 
       - name: Update Android version
         run: |
@@ -238,6 +301,7 @@ jobs:
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           track: alpha
           status: completed
+          whatsNewDirectory: .release-notes
       - name: Upload AAB to Google Play Internal
         if: github.event_name == 'push'
         uses: r0adkll/upload-google-play@v1
@@ -247,6 +311,7 @@ jobs:
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           track: internal
           status: completed
+          whatsNewDirectory: .release-notes
       - name: Download Bundletool
         run: |
           BUNDLETOOL_VERSION=1.17.2
