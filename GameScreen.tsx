@@ -58,6 +58,7 @@ const GameScreen: React.FC = () => {
   const [showGameSummary, setShowGameSummary] = useState<boolean>(false);
   const [gameSessionId, setGameSessionId] = useState<string | null>(null);
   const summaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [submitToLeaderboard, setSubmitToLeaderboard] = useState<boolean>(true);
 
   const clearSummaryTimeout = (): void => {
     cancelSummaryModal(summaryTimeoutRef);
@@ -213,8 +214,6 @@ const GameScreen: React.FC = () => {
   const continueGame = (): void => {
     clearSummaryTimeout();
     setRoundNumber(1);
-    setCorrectAnswers(0);
-    setCurrentScore(0);
     setCompletedRounds(0);
     setShowGameSummary(false);
     initializeGameSession();
@@ -255,7 +254,7 @@ const GameScreen: React.FC = () => {
   };
 
   const handleReturnToMainMenu = async (): Promise<void> => {
-    if (gameSessionId && currentScore > 0) {
+    if (submitToLeaderboard && gameSessionId && currentScore > 0) {
       try {
         await submitScore(gameSessionId, currentScore, {
           correctAnswers,
@@ -267,6 +266,8 @@ const GameScreen: React.FC = () => {
         console.error('Error submitting score:', error);
         Alert.alert('Warning', 'Could not submit score to leaderboard.');
       }
+    } else if (!submitToLeaderboard && currentScore > 0) {
+      console.log('Skipping leaderboard submission per user choice');
     }
     clearSummaryTimeout();
     setShowGameSummary(false);
@@ -573,19 +574,37 @@ const GameScreen: React.FC = () => {
               )}
               <View style={gameSummaryStyles.buttonContainer}>
                 <TouchableOpacity
+                  style={{
+                    marginBottom: 10,
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 16,
+                    backgroundColor: submitToLeaderboard ? '#4CAF50' : '#9E9E9E',
+                  }}
+                  onPress={() =>
+                    setSubmitToLeaderboard(prev => !prev)
+                  }
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 14 }}>
+                    {submitToLeaderboard
+                      ? 'Leaderboard: ON'
+                      : 'Leaderboard: OFF'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[styles.button, { backgroundColor: '#4CAF50' }]}
                   onPress={continueGame}
                 >
                   <Text style={styles.buttonText}>
                     Continue Game
                     {'\n'}
-                    (10 more rounds)
+                    (Keep score and play more)
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, { backgroundColor: '#2196F3' }]}
                   onPress={async () => {
-                    if (gameSessionId && currentScore > 0) {
+                    if (submitToLeaderboard && gameSessionId && currentScore > 0) {
                       try {
                         await submitScore(gameSessionId, currentScore, {
                           correctAnswers,
@@ -610,7 +629,11 @@ const GameScreen: React.FC = () => {
                         );
                       }
                     } else {
-                      // If no score to submit, just start fresh
+                      if (!submitToLeaderboard && currentScore > 0) {
+                        console.log(
+                          'Starting new game without submitting score per user choice',
+                        );
+                      }
                       setCurrentScore(0);
                       setCorrectAnswers(0);
                       setCompletedRounds(0);
@@ -619,18 +642,18 @@ const GameScreen: React.FC = () => {
                     }
                   }}
                 >
-                  <Text style={styles.buttonText}>New Game</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.button, { backgroundColor: '#F44336' }]}
-                  onPress={handleReturnToMainMenu}
-                >
                   <Text style={styles.buttonText}>
-                    Return to Main Menu
-                    {'\n'}
-                    (Submit to Leaderboard)
+                    New Game
                   </Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                   style={[styles.button, { backgroundColor: '#F44336' }]}
+                   onPress={handleReturnToMainMenu}
+                 >
+                   <Text style={styles.buttonText}>
+                     Return to Main Menu
+                   </Text>
+                 </TouchableOpacity>
               </View>
             </View>
           </View>

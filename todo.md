@@ -1,4 +1,3 @@
-- ~~fix licenses button~~
-- ~~fix summary modal button text~~
 - highlight user scores on leaderboard
+- change scoring to double or nothing if continued
 - double tap to zoom in/out on image
