@@ -15,8 +15,8 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import ImageViewer from 'react-native-image-zoom-viewer';
-import type { PrefetchedRound } from './geoApiUtils';
-import { normalizeCountry } from './geoApiUtils';
+import type { PrefetchedRound } from '../services/geoApiUtils';
+import { normalizeCountry } from '../services/geoApiUtils';
 import {
   AiDuelApiError,
   AiDuelGuessResponse,
@@ -26,8 +26,8 @@ import {
   AiDuelStatus,
   startAiMatch,
   submitAiGuess,
-} from './aiDuelUtils';
-import { NavigationProp, RootStackParamList } from './navigationTypes';
+} from '../services/aiDuelUtils';
+import { NavigationProp, RootStackParamList } from '../navigation/navigationTypes';
 
 const formatCountry = (value?: string | null): string => {
   if (!value) return 'Unknown';

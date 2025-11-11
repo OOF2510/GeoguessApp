@@ -9,8 +9,8 @@ import {
   Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NavigationProp } from './navigationTypes';
-import type { RootStackParamList } from './navigationTypes';
+import { NavigationProp } from '../navigation/navigationTypes';
+import type { RootStackParamList } from '../navigation/navigationTypes';
 
 const Licences: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();

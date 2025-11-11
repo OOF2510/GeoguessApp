@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import MainMenu from './MainMenu';
-import GameScreen from './GameScreen';
-import AiDuel from './AiDuel';
-import Licences from './Licences';
-import { RootStackParamList } from './navigationTypes';
-import { initializeFirebase } from './firebase';
-import { initAppCheck } from './leaderAuthUtils';
+import MainMenu from './screens/MainMenu';
+import GameScreen from './screens/GameScreen';
+import AiDuel from './screens/AiDuel';
+import Licences from './screens/Licences';
+import { RootStackParamList } from './navigation/navigationTypes';
+import { initializeFirebase } from './services/firebase';
+import { initAppCheck } from './services/leaderAuthUtils';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 

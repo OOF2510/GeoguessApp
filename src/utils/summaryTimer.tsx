@@ -2,7 +2,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
 export type SummaryTimerRef = MutableRefObject<ReturnType<typeof setTimeout> | null>;
 
-export const SUMMARY_MODAL_DELAY_MS = 2800;
+export const SUMMARY_MODAL_DELAY_MS = 2000;
 
 export const cancelSummaryModal = (timerRef: SummaryTimerRef): void => {
   if (timerRef.current) {

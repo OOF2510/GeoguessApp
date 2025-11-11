@@ -15,16 +15,16 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
-import { NavigationProp, RootStackParamList } from './navigationTypes';
+import { NavigationProp, RootStackParamList } from '../navigation/navigationTypes';
 import {
   getImageWithCountry,
   normalizeCountry,
   matchGuess,
-} from './geoApiUtils';
-import type { PrefetchedRound } from './geoApiUtils';
-import { startGameSession, submitScore } from './leaderAuthUtils';
+} from '../services/geoApiUtils';
+import type { PrefetchedRound } from '../services/geoApiUtils';
+import { startGameSession, submitScore } from '../services/leaderAuthUtils';
 import ImageViewer from 'react-native-image-zoom-viewer';
-import { scheduleSummaryModal, cancelSummaryModal } from './summaryTimer';
+import { scheduleSummaryModal, cancelSummaryModal } from '../utils/summaryTimer';
 
 const TOTAL_ROUNDS = 10;
 

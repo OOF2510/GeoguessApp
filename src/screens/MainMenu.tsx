@@ -14,26 +14,26 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NavigationProp } from './navigationTypes';
+import { NavigationProp } from '../navigation/navigationTypes';
 import RNFS from 'react-native-fs';
-import { getLeaderboard } from './leaderAuthUtils';
-import { getImageWithCountry } from './geoApiUtils';
-import type { PrefetchedRound } from './geoApiUtils';
+import { getLeaderboard } from '../services/leaderAuthUtils';
+import { getImageWithCountry } from '../services/geoApiUtils';
+import type { PrefetchedRound } from '../services/geoApiUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // const { width: screenWidth } = Dimensions.get('window');
 const backgroundImages: ImageSourcePropType[] = [
-  require('./assets/bg1.jpg'),
-  require('./assets/bg2.jpg'),
-  require('./assets/bg3.jpg'),
-  require('./assets/bg4.jpg'),
-  require('./assets/bg5.jpg'),
-  require('./assets/bg6.jpg'),
-  require('./assets/bg7.jpg'),
-  require('./assets/bg8.jpg'),
-  require('./assets/bg9.jpg'),
-  require('./assets/bg10.jpg'),
-  require('./assets/bg11.jpg'),
+  require('../../assets/bg1.jpg'),
+  require('../../assets/bg2.jpg'),
+  require('../../assets/bg3.jpg'),
+  require('../../assets/bg4.jpg'),
+  require('../../assets/bg5.jpg'),
+  require('../../assets/bg6.jpg'),
+  require('../../assets/bg7.jpg'),
+  require('../../assets/bg8.jpg'),
+  require('../../assets/bg9.jpg'),
+  require('../../assets/bg10.jpg'),
+  require('../../assets/bg11.jpg'),
 ];
 
 const MainMenu: React.FC = () => {

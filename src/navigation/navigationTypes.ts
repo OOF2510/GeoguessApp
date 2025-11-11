@@ -1,5 +1,5 @@
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { PrefetchedRound } from './geoApiUtils';
+import type { PrefetchedRound } from '../services/geoApiUtils';
 
 export type RootStackParamList = {
   MainMenu: undefined;
