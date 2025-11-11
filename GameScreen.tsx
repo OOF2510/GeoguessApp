@@ -644,6 +644,7 @@ const GameScreen: React.FC = () => {
                       setCurrentScore(0);
                       setCorrectAnswers(0);
                       setCompletedRounds(0);
+                      setRoundNumber(1);
                       setIsContinued(false);
                       initializeGameSession();
                     }
