@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -9,17 +9,13 @@ type Props = {
 const BACKEND_URL = 'https://geo.api.oof2510.space';
 
 export function PanoViewer({ imageUrl }: Props) {
-  // Create proxied URL
-  const proxiedUrl = useMemo(() => {
-    return `${BACKEND_URL}/proxy-image?url=${encodeURIComponent(imageUrl)}`;
-  }, [imageUrl]);
+  const proxiedUrl = `${BACKEND_URL}/proxy-image?url=${encodeURIComponent(imageUrl)}`;
 
   const html = `
     <!DOCTYPE html>
     <html>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photo-sphere-viewer@4/dist/photo-sphere-viewer.min.css" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
         <style>
           * {
             margin: 0;
@@ -31,119 +27,180 @@ export function PanoViewer({ imageUrl }: Props) {
             height: 100%;
             background: #000;
             overflow: hidden;
-            position: fixed;
           }
-          #viewer {
+          #canvas {
             width: 100vw;
             height: 100vh;
-            position: absolute;
-            top: 0;
-            left: 0;
+            display: block;
+            touch-action: none;
           }
-          #loading {
+          #status {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 10px;
+            left: 10px;
             color: white;
-            font-family: Arial, sans-serif;
-            z-index: 1000;
-            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            font-family: Arial;
+            font-size: 12px;
+            z-index: 10;
+            border-radius: 5px;
           }
         </style>
       </head>
       <body>
-        <div id="loading">Loading panorama...</div>
-        <div id="viewer"></div>
+        <div id="status">Loading...</div>
+        <canvas id="canvas"></canvas>
 
-        <script src="https://cdn.jsdelivr.net/npm/three@0.147/build/three.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/uevent@2/browser.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/photo-sphere-viewer@4/dist/photo-sphere-viewer.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
         <script>
-          const loading = document.getElementById('loading');
-          
-          function log(msg) {
-            console.log(msg);
-            if (loading) loading.textContent = msg;
-            window.ReactNativeWebView && window.ReactNativeWebView.postMessage(msg);
-          }
-
-          // Override localStorage to prevent errors
-          window.localStorage = {
-            getItem: function() { return null; },
-            setItem: function() {},
-            removeItem: function() {},
-            clear: function() {},
-            key: function() { return null; },
-            length: 0
-          };
-          window.sessionStorage = window.localStorage;
-
           (function() {
-            function initViewer() {
-              try {
-                log('Initializing viewer...');
+            const status = document.getElementById('status');
+            
+            function log(msg) {
+              console.log(msg);
+              if (status) status.textContent = msg;
+              window.ReactNativeWebView && window.ReactNativeWebView.postMessage(msg);
+            }
+
+            if (typeof THREE === 'undefined') {
+              log('Error: THREE.js not loaded');
+              return;
+            }
+
+            log('Initializing...');
+
+            const canvas = document.getElementById('canvas');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(
+              75,
+              window.innerWidth / window.innerHeight,
+              0.1,
+              1000
+            );
+            camera.position.set(0, 0, 0.1);
+
+            const renderer = new THREE.WebGLRenderer({
+              canvas: canvas,
+              antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            // Create sphere geometry
+            const geometry = new THREE.SphereGeometry(500, 60, 40);
+            geometry.scale(-1, 1, 1); // Invert to see inside
+
+            // Load texture
+            log('Loading image...');
+            const loader = new THREE.TextureLoader();
+            loader.crossOrigin = 'anonymous';
+            
+            loader.load(
+              ${JSON.stringify(proxiedUrl)},
+              function(texture) {
+                log('Image loaded successfully!');
                 
-                if (typeof PhotoSphereViewer === 'undefined') {
-                  log('Error: PhotoSphereViewer not loaded');
-                  return;
-                }
+                const material = new THREE.MeshBasicMaterial({
+                  map: texture
+                });
                 
-                if (typeof THREE === 'undefined') {
-                  log('Error: THREE.js not loaded');
-                  return;
+                const sphere = new THREE.Mesh(geometry, material);
+                scene.add(sphere);
+
+                // Hide status after success
+                setTimeout(() => {
+                  if (status) status.style.display = 'none';
+                }, 2000);
+
+                // Touch/drag controls
+                let isDragging = false;
+                let previousTouch = { x: 0, y: 0 };
+                const sensitivity = 0.002;
+
+                canvas.addEventListener('touchstart', (e) => {
+                  isDragging = true;
+                  const touch = e.touches[0];
+                  previousTouch = { x: touch.clientX, y: touch.clientY };
+                  e.preventDefault();
+                }, { passive: false });
+
+                canvas.addEventListener('touchmove', (e) => {
+                  if (!isDragging) return;
+                  
+                  const touch = e.touches[0];
+                  const deltaX = touch.clientX - previousTouch.x;
+                  const deltaY = touch.clientY - previousTouch.y;
+
+                  camera.rotation.y += deltaX * sensitivity;
+                  camera.rotation.x += deltaY * sensitivity;
+                  
+                  // Limit vertical rotation
+                  camera.rotation.x = Math.max(
+                    -Math.PI / 2,
+                    Math.min(Math.PI / 2, camera.rotation.x)
+                  );
+
+                  previousTouch = { x: touch.clientX, y: touch.clientY };
+                  e.preventDefault();
+                }, { passive: false });
+
+                canvas.addEventListener('touchend', () => {
+                  isDragging = false;
+                });
+
+                // Mouse controls for testing
+                let isMouseDown = false;
+                canvas.addEventListener('mousedown', (e) => {
+                  isMouseDown = true;
+                  previousTouch = { x: e.clientX, y: e.clientY };
+                });
+
+                canvas.addEventListener('mousemove', (e) => {
+                  if (!isMouseDown) return;
+                  
+                  const deltaX = e.clientX - previousTouch.x;
+                  const deltaY = e.clientY - previousTouch.y;
+
+                  camera.rotation.y += deltaX * sensitivity;
+                  camera.rotation.x += deltaY * sensitivity;
+                  
+                  camera.rotation.x = Math.max(
+                    -Math.PI / 2,
+                    Math.min(Math.PI / 2, camera.rotation.x)
+                  );
+
+                  previousTouch = { x: e.clientX, y: e.clientY };
+                });
+
+                canvas.addEventListener('mouseup', () => {
+                  isMouseDown = false;
+                });
+
+                // Render loop
+                function animate() {
+                  requestAnimationFrame(animate);
+                  renderer.render(scene, camera);
                 }
-
-                const viewer = new PhotoSphereViewer.Viewer({
-                  container: document.getElementById('viewer'),
-                  panorama: ${JSON.stringify(proxiedUrl)},
-                  defaultLong: 0,
-                  defaultLat: 0,
-                  navbar: false,
-                  mousewheel: true,
-                  mousemove: true,
-                  touchmoveTwoFingers: false,
-                  minFov: 30,
-                  maxFov: 90,
-                  defaultZoomLvl: 50,
-                  fisheye: false,
-                });
-
-                viewer.once('ready', function() {
-                  log('Ready!');
-                  setTimeout(() => {
-                    if (loading) loading.style.display = 'none';
-                  }, 1000);
-                });
-
-                viewer.once('panorama-error', function(err) {
-                  log('Error loading panorama: ' + (err ? err.message : 'unknown'));
-                });
-
-              } catch (error) {
-                log('Error: ' + error.message);
+                animate();
+              },
+              function(xhr) {
+                const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
+                log('Loading: ' + percent + '%');
+              },
+              function(error) {
+                log('Error loading image: ' + error.message);
               }
-            }
+            );
 
-            // Wait for libraries to load
-            let attempts = 0;
-            function tryInit() {
-              attempts++;
-              if (typeof PhotoSphereViewer !== 'undefined' && typeof THREE !== 'undefined') {
-                setTimeout(initViewer, 100);
-              } else if (attempts < 30) {
-                setTimeout(tryInit, 200);
-              } else {
-                log('Timeout: Libraries failed to load');
-              }
-            }
+            // Handle window resize
+            window.addEventListener('resize', () => {
+              camera.aspect = window.innerWidth / window.innerHeight;
+              camera.updateProjectionMatrix();
+              renderer.setSize(window.innerWidth, window.innerHeight);
+            });
 
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', tryInit);
-            } else {
-              tryInit();
-            }
           })();
         </script>
       </body>
@@ -169,7 +226,6 @@ export function PanoViewer({ imageUrl }: Props) {
         onMessage={(event) => {
           console.log('[PanoViewer]:', event.nativeEvent.data);
         }}
-        scalesPageToFit={true}
       />
     </View>
   );
