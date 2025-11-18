@@ -61,8 +61,8 @@ const Licences: React.FC = () => {
           <Text style={styles.sectionTitle}>Fallback Map Data</Text>
           <Text style={styles.licenseText}>
             Fallback map data provided by:{'\n'}
-            - {renderLink('https://www.bigdatacloud.com/terms', 'BigDataCloud')}{'\n'}
-            - {renderLink('https://geocode.xyz/terms', 'Geocode.xyz')}{'\n'}
+            - {renderLink('https://www.bigdatacloud.com/terms', 'BigDataCloud (CC-BY-4.0)')}{'\n'}
+            - {renderLink('https://www.openmetromaps.org', 'Open-Metro (CC-BY-4.0)')}{'\n'}
             - Geonames ({renderLink('http://creativecommons.org/licenses/by-sa/4.0/', 'CC-BY-SA 4.0')})
           </Text>
         </View>
@@ -71,15 +71,13 @@ const Licences: React.FC = () => {
           <Text style={styles.sectionTitle}>AI Models</Text>
           <Text style={styles.licenseText}>
             AI models used for AI 1v1 provided by OpenRouter:{'\n'}
-            - Mistral-Small-3.2-24B-Instruct licensed under Apache-2.0{'\n'}
-            For more details: {renderLink('https://www.apache.org/licenses/LICENSE-2.0')}{'\n'}
-            {'\n'}
-            - Llama-4-Scout: Llama 4 is licensed under the Llama 4 Community License, Copyright © Meta Platforms, Inc. All Rights Reserved.{'\n'}
-            For more details: {renderLink('https://llama.meta.com/llama4/use-policy')}{'\n'}
-            {'\n'}
-            - Polaris Alpha: {renderLink('https://openrouter.ai/openrouter/polaris-alpha')}
+            - Mistral Small 3.2 24B Instruct: licensed under Apache-2.0{'\n'}
+            - Sherlock Dash Alpha: Cloaked model provided by OpenRouter{'\n'}
+            - Qwen 2.5 VL 32b Instruct: licensed under Apache-2.0{'\n'}
+            For more details on Apache-2.0: {renderLink('https://www.apache.org/licenses/LICENSE-2.0')}
           </Text>
         </View>
+
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Libraries</Text>
@@ -91,8 +89,8 @@ const Licences: React.FC = () => {
             {'\n'}
             For full licenses, refer to{' '}
             {renderLink(
-              'https://github.com/oof2510/GeoguessApp/blob/main/package.json',
-              'package.json',
+              'https://github.com/oof2510/GeoguessApp/blob/main/package-lock.json',
+              'package-lock.json',
             )}
             .
           </Text>

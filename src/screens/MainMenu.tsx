@@ -235,6 +235,10 @@ const MainMenu: React.FC = () => {
     prefetchInitialRound();
   };
 
+  const handleStartPanoGame = () => {
+    navigation.navigate('PanoGame');
+  };
+
   const handleLeaderboard = async () => {
     setShowLeaderboard(true);
     setLoadingLeaderboard(true);
@@ -371,6 +375,9 @@ const MainMenu: React.FC = () => {
         <TouchableOpacity style={styles.aiButton} onPress={handleStartAiGame}>
           <Text style={styles.buttonText}>Play vs AI</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.panoButton} onPress={handleStartPanoGame}>
+          <Text style={styles.buttonText}>360° Mode</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.leaderboardButton}
           onPress={handleLeaderboard}
@@ -478,17 +485,16 @@ const MainMenu: React.FC = () => {
                   {'\n'}
                   Map data provided by OpenStreetMap, licensed under ODbL.
                   {'\n'}
-                  Fallback map data provided by BigDataCloud, Geocode.xyz, and
+                  Fallback map data provided by BigDataCloud, Open-Metro (CC-BY-4.0), and
                   Geonames (CC-BY-SA)
                   {'\n'}
                   {'\n'}
                   AI models used for AI 1v1 provided by OpenRouter:
-                  {'\n'}- Mistral-Small-3.2-24B-Instruct: licensed under
+                  {'\n'}- Mistral Small 3.2 24B Instruct: licensed under
                   Apache-2.0 (see licenses)
-                  {'\n'}- Llama-4-Scout: Llama 4 is licensed under the Llama 4
-                  Community License, Copyright © Meta Platforms, Inc. All Rights
-                  Reserved. (see licenses)
-                  {'\n'}- Polaris Alpha: Cloaked model provided by OpenRouter
+                  {'\n'}- Sherlock Dash Alpha: Cloaked model provided by OpenRouter
+                  {'\n'}- Qwen 2.5 VL 32b Instruct: licensed under
+                  Apache-2.0 (see licenses)
                 </Text>
               </View>
             </ScrollView>
@@ -572,6 +578,15 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderRadius: 25,
     backgroundColor: 'rgba(33,37,243,0.56)',
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  panoButton: {
+    width: '80%',
+    marginBottom: 15,
+    borderRadius: 25,
+    backgroundColor: 'rgba(9, 211, 247, 0.56)',
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',

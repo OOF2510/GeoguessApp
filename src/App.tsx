@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import MainMenu from './screens/MainMenu';
 import GameScreen from './screens/GameScreen';
+import PanoGameScreen from './screens/PanoGameScreen';
 import AiDuel from './screens/AiDuel';
 import Licences from './screens/Licences';
 import { RootStackParamList } from './navigation/navigationTypes';
@@ -29,6 +30,7 @@ const App: React.FC = () => {
       >
         <Stack.Screen name="MainMenu" component={MainMenu} />
         <Stack.Screen name="Game" component={GameScreen} />
+        <Stack.Screen name="PanoGame" component={PanoGameScreen} />
         <Stack.Screen name="AiDuel" component={AiDuel} />
         <Stack.Screen name="Licences" component={Licences} />
       </Stack.Navigator>
