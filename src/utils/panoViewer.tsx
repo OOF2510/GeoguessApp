@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 type Props = {
@@ -7,7 +7,49 @@ type Props = {
 };
 
 export function PanoViewer({ imageUrl }: Props) {
-  const html = `
+  const [base64Image, setBase64Image] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadImage = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch the image as a blob
+        const response = await fetch(imageUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        
+        // Convert blob to base64
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          setBase64Image(base64data);
+          setLoading(false);
+        };
+        reader.onerror = () => {
+          setError('Failed to convert image');
+          setLoading(false);
+        };
+        reader.readAsDataURL(blob);
+      } catch (err) {
+        console.error('Error loading image:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load image');
+        setLoading(false);
+      }
+    };
+
+    if (imageUrl) {
+      loadImage();
+    }
+  }, [imageUrl]);
+
+  const html = base64Image ? `
     <!DOCTYPE html>
     <html>
       <head>
@@ -33,18 +75,9 @@ export function PanoViewer({ imageUrl }: Props) {
             top: 0;
             left: 0;
           }
-          #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-family: Arial, sans-serif;
-          }
         </style>
       </head>
       <body>
-        <div id="loading">Loading panorama...</div>
         <div id="viewer"></div>
 
         <script src="https://cdn.jsdelivr.net/npm/three@0.147/build/three.min.js"></script>
@@ -52,67 +85,94 @@ export function PanoViewer({ imageUrl }: Props) {
         <script src="https://cdn.jsdelivr.net/npm/photo-sphere-viewer@4/dist/photo-sphere-viewer.min.js"></script>
 
         <script>
+          // Override localStorage to prevent errors
+          window.localStorage = {
+            getItem: function() { return null; },
+            setItem: function() {},
+            removeItem: function() {},
+            clear: function() {},
+            key: function() { return null; },
+            length: 0
+          };
+          window.sessionStorage = window.localStorage;
+
           (function() {
-            // Wait for all scripts to load
             function initViewer() {
               try {
-                const loading = document.getElementById('loading');
-                
-                // Check if PhotoSphereViewer is loaded
                 if (typeof PhotoSphereViewer === 'undefined') {
                   console.error('PhotoSphereViewer not loaded');
-                  if (loading) loading.textContent = 'Error: Viewer not loaded';
                   return;
                 }
 
                 const viewer = new PhotoSphereViewer.Viewer({
                   container: document.getElementById('viewer'),
-                  panorama: ${JSON.stringify(imageUrl)},
+                  panorama: ${JSON.stringify(base64Image)},
                   defaultLong: 0,
                   defaultLat: 0,
-                  navbar: ['zoom', 'fullscreen'],
+                  navbar: false,
                   mousewheel: true,
                   mousemove: true,
                   touchmoveTwoFingers: false,
-                  loadingImg: null,
-                  loadingTxt: 'Loading...',
                   size: {
                     width: '100%',
                     height: '100%'
                   },
+                  fisheye: false,
                 });
 
-                // Hide loading message once ready
                 viewer.once('ready', function() {
-                  console.log('Panorama loaded successfully');
-                  if (loading) loading.style.display = 'none';
+                  console.log('Panorama loaded');
+                  window.ReactNativeWebView && window.ReactNativeWebView.postMessage('ready');
                 });
 
-                // Error handling
                 viewer.once('panorama-error', function(err) {
-                  console.error('Panorama load error:', err);
-                  if (loading) loading.textContent = 'Error loading panorama';
+                  console.error('Panorama error:', err);
+                  window.ReactNativeWebView && window.ReactNativeWebView.postMessage('error');
                 });
 
               } catch (error) {
                 console.error('Error initializing viewer:', error);
-                const loading = document.getElementById('loading');
-                if (loading) loading.textContent = 'Error: ' + error.message;
               }
             }
 
-            // Initialize when DOM is ready
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', initViewer);
-            } else {
-              // Give scripts time to load
+            if (document.readyState === 'complete') {
               setTimeout(initViewer, 100);
+            } else {
+              window.addEventListener('load', function() {
+                setTimeout(initViewer, 100);
+              });
             }
           })();
         </script>
       </body>
     </html>
-  `;
+  ` : '';
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text style={styles.loadingText}>Loading panorama...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Failed to load panorama</Text>
+        <Text style={styles.errorDetails}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (!base64Image) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>No image data</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -121,27 +181,19 @@ export function PanoViewer({ imageUrl }: Props) {
         source={{ html }}
         style={styles.webview}
         javaScriptEnabled={true}
-        domStorageEnabled={true}
+        domStorageEnabled={false}
         allowFileAccess={true}
         allowUniversalAccessFromFileURLs={true}
         mixedContentMode="always"
+        cacheEnabled={false}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
           console.error('WebView error:', nativeEvent);
         }}
-        onHttpError={(syntheticEvent) => {
-          const { nativeEvent } = syntheticEvent;
-          console.error('HTTP error:', nativeEvent.statusCode);
-        }}
         onMessage={(event) => {
-          console.log('WebView message:', event.nativeEvent.data);
+          console.log('[PanoViewer]:', event.nativeEvent.data);
         }}
-        renderLoading={() => (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4CAF50" />
-          </View>
-        )}
-        startInLoadingState={true}
+        scalesPageToFit={true}
       />
     </View>
   );
@@ -154,16 +206,36 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'black',
   },
   loadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'black',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    marginTop: 10,
+    fontSize: 14,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'black',
+    padding: 20,
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  errorDetails: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    textAlign: 'center',
   },
 });
