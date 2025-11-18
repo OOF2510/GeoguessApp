@@ -1,55 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 type Props = {
   imageUrl: string;
 };
 
+const BACKEND_URL = 'https://geo.api.oof2510.space';
+
 export function PanoViewer({ imageUrl }: Props) {
-  const [base64Image, setBase64Image] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadImage = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch the image as a blob
-        const response = await fetch(imageUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch image: ${response.status}`);
-        }
-        
-        const blob = await response.blob();
-        
-        // Convert blob to base64
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64data = reader.result as string;
-          setBase64Image(base64data);
-          setLoading(false);
-        };
-        reader.onerror = () => {
-          setError('Failed to convert image');
-          setLoading(false);
-        };
-        reader.readAsDataURL(blob);
-      } catch (err) {
-        console.error('Error loading image:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load image');
-        setLoading(false);
-      }
-    };
-
-    if (imageUrl) {
-      loadImage();
-    }
+  // Create proxied URL
+  const proxiedUrl = useMemo(() => {
+    return `${BACKEND_URL}/proxy-image?url=${encodeURIComponent(imageUrl)}`;
   }, [imageUrl]);
 
-  const html = base64Image ? `
+  const html = `
     <!DOCTYPE html>
     <html>
       <head>
@@ -75,9 +40,20 @@ export function PanoViewer({ imageUrl }: Props) {
             top: 0;
             left: 0;
           }
+          #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            z-index: 1000;
+            text-align: center;
+          }
         </style>
       </head>
       <body>
+        <div id="loading">Loading panorama...</div>
         <div id="viewer"></div>
 
         <script src="https://cdn.jsdelivr.net/npm/three@0.147/build/three.min.js"></script>
@@ -85,6 +61,14 @@ export function PanoViewer({ imageUrl }: Props) {
         <script src="https://cdn.jsdelivr.net/npm/photo-sphere-viewer@4/dist/photo-sphere-viewer.min.js"></script>
 
         <script>
+          const loading = document.getElementById('loading');
+          
+          function log(msg) {
+            console.log(msg);
+            if (loading) loading.textContent = msg;
+            window.ReactNativeWebView && window.ReactNativeWebView.postMessage(msg);
+          }
+
           // Override localStorage to prevent errors
           window.localStorage = {
             getItem: function() { return null; },
@@ -99,80 +83,72 @@ export function PanoViewer({ imageUrl }: Props) {
           (function() {
             function initViewer() {
               try {
+                log('Initializing viewer...');
+                
                 if (typeof PhotoSphereViewer === 'undefined') {
-                  console.error('PhotoSphereViewer not loaded');
+                  log('Error: PhotoSphereViewer not loaded');
+                  return;
+                }
+                
+                if (typeof THREE === 'undefined') {
+                  log('Error: THREE.js not loaded');
                   return;
                 }
 
                 const viewer = new PhotoSphereViewer.Viewer({
                   container: document.getElementById('viewer'),
-                  panorama: ${JSON.stringify(base64Image)},
+                  panorama: ${JSON.stringify(proxiedUrl)},
                   defaultLong: 0,
                   defaultLat: 0,
                   navbar: false,
                   mousewheel: true,
                   mousemove: true,
                   touchmoveTwoFingers: false,
-                  size: {
-                    width: '100%',
-                    height: '100%'
-                  },
+                  minFov: 30,
+                  maxFov: 90,
+                  defaultZoomLvl: 50,
                   fisheye: false,
                 });
 
                 viewer.once('ready', function() {
-                  console.log('Panorama loaded');
-                  window.ReactNativeWebView && window.ReactNativeWebView.postMessage('ready');
+                  log('Ready!');
+                  setTimeout(() => {
+                    if (loading) loading.style.display = 'none';
+                  }, 1000);
                 });
 
                 viewer.once('panorama-error', function(err) {
-                  console.error('Panorama error:', err);
-                  window.ReactNativeWebView && window.ReactNativeWebView.postMessage('error');
+                  log('Error loading panorama: ' + (err ? err.message : 'unknown'));
                 });
 
               } catch (error) {
-                console.error('Error initializing viewer:', error);
+                log('Error: ' + error.message);
               }
             }
 
-            if (document.readyState === 'complete') {
-              setTimeout(initViewer, 100);
-            } else {
-              window.addEventListener('load', function() {
+            // Wait for libraries to load
+            let attempts = 0;
+            function tryInit() {
+              attempts++;
+              if (typeof PhotoSphereViewer !== 'undefined' && typeof THREE !== 'undefined') {
                 setTimeout(initViewer, 100);
-              });
+              } else if (attempts < 30) {
+                setTimeout(tryInit, 200);
+              } else {
+                log('Timeout: Libraries failed to load');
+              }
+            }
+
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', tryInit);
+            } else {
+              tryInit();
             }
           })();
         </script>
       </body>
     </html>
-  ` : '';
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
-        <Text style={styles.loadingText}>Loading panorama...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load panorama</Text>
-        <Text style={styles.errorDetails}>{error}</Text>
-      </View>
-    );
-  }
-
-  if (!base64Image) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>No image data</Text>
-      </View>
-    );
-  }
+  `;
 
   return (
     <View style={styles.container}>
@@ -185,7 +161,7 @@ export function PanoViewer({ imageUrl }: Props) {
         allowFileAccess={true}
         allowUniversalAccessFromFileURLs={true}
         mixedContentMode="always"
-        cacheEnabled={false}
+        cacheEnabled={true}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
           console.error('WebView error:', nativeEvent);
@@ -207,35 +183,5 @@ const styles = StyleSheet.create({
   webview: {
     flex: 1,
     backgroundColor: 'black',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'black',
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    marginTop: 10,
-    fontSize: 14,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'black',
-    padding: 20,
-  },
-  errorText: {
-    color: '#FF6B6B',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  errorDetails: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    textAlign: 'center',
   },
 });
