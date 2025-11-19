@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Modal,
   BackHandler,
+  PermissionsAndroid,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -22,6 +23,7 @@ import {
 import { geoApiClient, getAppCheckToken, startGameSession, submitScore } from '../services/leaderAuthUtils';
 import { PanoViewer } from '../utils/panoViewer';
 import { scheduleSummaryModal, cancelSummaryModal } from '../utils/summaryTimer';
+import { Platform } from 'react-native';
 
 const TOTAL_ROUNDS = 10;
 
@@ -124,6 +126,8 @@ const PanoGameScreen: React.FC = () => {
   const summaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [submitToLeaderboard, setSubmitToLeaderboard] = useState<boolean>(true);
   const [isContinued, setIsContinued] = useState<boolean>(false);
+  const [gyroEnabled, setGyroEnabled] = useState<boolean>(false);
+  const [gyroAvailable, setGyroAvailable] = useState<boolean>(false);
 
   const clearSummaryTimeout = (): void => {
     cancelSummaryModal(summaryTimeoutRef);
@@ -344,6 +348,50 @@ const PanoGameScreen: React.FC = () => {
     navigation.navigate('MainMenu');
   };
 
+  const toggleGyro = async (): Promise<void> => {
+    if (!gyroAvailable) {
+      Alert.alert('Gyro Not Available', 'Device orientation is not supported on this device.');
+      return;
+    }
+
+    // Request permission on Android
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.BODY_SENSORS,
+          {
+            title: 'Gyroscope Permission',
+            message: 'This app needs access to the gyroscope to enable motion controls.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert('Permission Denied', 'Gyroscope access was denied.');
+          return;
+        }
+      } catch (err) {
+        console.error('Permission request failed:', err);
+        return;
+      }
+    }
+
+    const newGyroState = !gyroEnabled;
+    setGyroEnabled(newGyroState);
+  };
+
+  const handleWebViewMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'gyroAvailable') {
+        setGyroAvailable(data.available);
+      }
+    } catch (e) {
+      console.log('Received non-JSON message:', event.nativeEvent.data);
+    }
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -359,6 +407,29 @@ const PanoGameScreen: React.FC = () => {
       marginBottom: 20,
       marginTop: 20,
       color: '#FFFFFF',
+    },
+    roundContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 10,
+      width: '100%',
+    },
+    gyroButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      marginRight: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 3,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+    },
+    gyroButtonText: {
+      fontSize: 18,
     },
     panoContainer: {
       width: '100%',
@@ -532,13 +603,34 @@ const PanoGameScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.title}>GeoFinder Panorama</Text>
-          <Text style={{ color: '#FFF', marginBottom: 10 }}>
-            Round {roundNumber}/{TOTAL_ROUNDS}
-          </Text>
+          <View style={styles.roundContainer}>
+            <TouchableOpacity 
+              style={[
+                styles.gyroButton, 
+                {
+                  backgroundColor: gyroEnabled ? '#4CAF50' : '#666666',
+                  opacity: gyroAvailable ? 1 : 0.5
+                }
+              ]} 
+              onPress={toggleGyro}
+              disabled={!gyroAvailable}
+            >
+              <Text style={styles.gyroButtonText}>
+                {gyroEnabled ? '🎯' : '📱'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={{ color: '#FFF', marginBottom: 10 }}>
+              Round {roundNumber}/{TOTAL_ROUNDS}
+            </Text>
+          </View>
           {loading && <Text style={{ color: '#FFF' }}>Loading...</Text>}
           {panoramaUrl && (
             <View style={styles.panoContainer}>
-              <PanoViewer imageUrl={panoramaUrl} />
+              <PanoViewer 
+                imageUrl={panoramaUrl} 
+                enableGyro={gyroEnabled}
+                onMessage={handleWebViewMessage}
+              />
             </View>
           )}
           {!gameOver && panoramaUrl && (
