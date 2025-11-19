@@ -79,7 +79,7 @@ export function PanoViewer({ imageUrl }: Props) {
               0.1,
               1000
             );
-            camera.position.set(0, 0, 0.1);
+            camera.position.set(0, 0, 0);
 
             const renderer = new THREE.WebGLRenderer({
               canvas: canvas,
@@ -117,55 +117,87 @@ export function PanoViewer({ imageUrl }: Props) {
                 // Touch/drag controls
                 let isDragging = false;
                 let previousTouch = { x: 0, y: 0 };
-                const sensitivity = 0.005;
                 let lon = 0;
                 let lat = 0;
+                let radius = 100;
+                let lonVel = 0;
+                let latVel = 0;
+                const rotationSpeed = 0.3;
+                const zoomSpeed = 0.5;
+                const friction = 0.94;
+                let isPinching = false;
+                let isInteracting = false;
+                let prevPinchDist = 0;
 
                 function updateView() {
                   // Convert spherical coordinates to camera rotation
                   const phi = THREE.MathUtils.degToRad(90 - lat);
                   const theta = THREE.MathUtils.degToRad(lon);
 
-                  camera.position.x = 100 * Math.sin(phi) * Math.cos(theta);
-                  camera.position.y = 100 * Math.cos(phi);
-                  camera.position.z = 100 * Math.sin(phi) * Math.sin(theta);
+                  camera.position.x = radius * Math.sin(phi) * Math.cos(theta);
+                  camera.position.y = radius * Math.cos(phi);
+                  camera.position.z = radius * Math.sin(phi) * Math.sin(theta);
                   
                   camera.lookAt(scene.position);
                 }
 
                 canvas.addEventListener('touchstart', (e) => {
-                  isDragging = true;
-                  const touch = e.touches[0];
-                  previousTouch = { x: touch.clientX, y: touch.clientY };
                   e.preventDefault();
+                  isInteracting = true;
+                  if (e.touches.length === 1) {
+                    isDragging = true;
+                    const touch = e.touches[0];
+                    previousTouch = { x: touch.clientX, y: touch.clientY };
+                  } else if (e.touches.length === 2) {
+                    isPinching = true;
+                    prevPinchDist = Math.hypot(
+                      e.touches[0].clientX - e.touches[1].clientX,
+                      e.touches[0].clientY - e.touches[1].clientY
+                    );
+                  }
                 }, { passive: false });
 
                 canvas.addEventListener('touchmove', (e) => {
-                  if (!isDragging) return;
-                  
-                  const touch = e.touches[0];
-                  const deltaX = touch.clientX - previousTouch.x;
-                  const deltaY = touch.clientY - previousTouch.y;
-
-                  lon -= deltaX * 0.3;
-                  lat += deltaY * 0.3;
-                  
-                  // Limit vertical rotation to prevent flipping
-                  lat = Math.max(-85, Math.min(85, lat));
-
-                  updateView();
-
-                  previousTouch = { x: touch.clientX, y: touch.clientY };
                   e.preventDefault();
+                  if (e.touches.length === 1 && isDragging) {
+                    const touch = e.touches[0];
+                    const deltaX = touch.clientX - previousTouch.x;
+                    const deltaY = touch.clientY - previousTouch.y;
+                    const lonChange = -deltaX * rotationSpeed;
+                    const latChange = -deltaY * rotationSpeed;
+                    lon += lonChange;
+                    lonVel = lonChange;
+                    lat += latChange;
+                    latVel = latChange;
+                    // Limit vertical rotation to prevent flipping
+                    lat = Math.max(-85, Math.min(85, lat));
+                    updateView();
+                    previousTouch = { x: touch.clientX, y: touch.clientY };
+                  } else if (e.touches.length === 2 && isPinching) {
+                    const currDist = Math.hypot(
+                      e.touches[0].clientX - e.touches[1].clientX,
+                      e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const deltaDist = currDist - prevPinchDist;
+                    radius -= deltaDist * zoomSpeed;
+                    radius = Math.max(20, Math.min(1000, radius));
+                    updateView();
+                    prevPinchDist = currDist;
+                  }
                 }, { passive: false });
 
-                canvas.addEventListener('touchend', () => {
-                  isDragging = false;
+                canvas.addEventListener('touchend', (e) => {
+                  if (e.touches.length === 0) {
+                    isDragging = false;
+                    isPinching = false;
+                    isInteracting = false;
+                  }
                 });
 
                 // Mouse controls for testing
                 let isMouseDown = false;
                 canvas.addEventListener('mousedown', (e) => {
+                  isInteracting = true;
                   isMouseDown = true;
                   previousTouch = { x: e.clientX, y: e.clientY };
                 });
@@ -175,19 +207,21 @@ export function PanoViewer({ imageUrl }: Props) {
                   
                   const deltaX = e.clientX - previousTouch.x;
                   const deltaY = e.clientY - previousTouch.y;
-
-                  lon -= deltaX * 0.3;
-                  lat += deltaY * 0.3;
+                  const lonChange = -deltaX * rotationSpeed;
+                  const latChange = -deltaY * rotationSpeed;
+                  lon += lonChange;
+                  lonVel = lonChange;
+                  lat += latChange;
+                  latVel = latChange;
                   
                   lat = Math.max(-85, Math.min(85, lat));
-
                   updateView();
-
                   previousTouch = { x: e.clientX, y: e.clientY };
                 });
 
                 canvas.addEventListener('mouseup', () => {
                   isMouseDown = false;
+                  isInteracting = false;
                 });
 
                 // Initial view
@@ -196,6 +230,18 @@ export function PanoViewer({ imageUrl }: Props) {
                 // Render loop
                 function animate() {
                   requestAnimationFrame(animate);
+                  if (!isInteracting) {
+                    lon += lonVel;
+                    lat += latVel;
+                    lat = Math.max(-85, Math.min(85, lat));
+                    lonVel *= friction;
+                    latVel *= friction;
+                    if (Math.abs(lonVel) < 0.1 &amp;&amp; Math.abs(latVel) < 0.1) {
+                      lonVel = 0;
+                      latVel = 0;
+                    }
+                  }
+                  updateView();
                   renderer.render(scene, camera);
                 }
                 animate();
