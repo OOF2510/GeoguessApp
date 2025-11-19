@@ -148,7 +148,7 @@ export function PanoViewer({ imageUrl }: Props) {
                   const deltaY = touch.clientY - previousTouch.y;
 
                   lon -= deltaX * 0.3;
-                  lat += deltaY * 0.3;
+                  lat -= deltaY * 0.3; 
                   
                   // Limit vertical rotation to prevent flipping
                   lat = Math.max(-85, Math.min(85, lat));
@@ -177,8 +177,8 @@ export function PanoViewer({ imageUrl }: Props) {
                   const deltaY = e.clientY - previousTouch.y;
 
                   lon -= deltaX * 0.3;
-                  lat += deltaY * 0.3;
-                  
+                  lat -= deltaY * 0.3; 
+
                   lat = Math.max(-85, Math.min(85, lat));
 
                   updateView();
