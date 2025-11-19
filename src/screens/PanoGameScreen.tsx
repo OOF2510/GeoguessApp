@@ -239,7 +239,7 @@ const PanoGameScreen: React.FC = () => {
 
       if (newScore > highScore) {
         setHighScore(newScore);
-        AsyncStorage.setItem('highScore', newScore.toString());
+        AsyncStorage.setItem('highScorePano', newScore.toString());
       }
     } else {
       const newIncorrect: string[] = [...incorrectGuesses, guess];
@@ -505,7 +505,7 @@ const PanoGameScreen: React.FC = () => {
   useEffect(() => {
     const loadHighScore = async () => {
       try {
-        const stored = await AsyncStorage.getItem('highScore');
+        const stored = await AsyncStorage.getItem('highScorePano');
         if (stored) {
           setHighScore(parseInt(stored, 10)); // force base 10
         }

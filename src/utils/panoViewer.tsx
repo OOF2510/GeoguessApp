@@ -117,7 +117,21 @@ export function PanoViewer({ imageUrl }: Props) {
                 // Touch/drag controls
                 let isDragging = false;
                 let previousTouch = { x: 0, y: 0 };
-                const sensitivity = 0.002;
+                const sensitivity = 0.005;
+                let lon = 0;
+                let lat = 0;
+
+                function updateView() {
+                  // Convert spherical coordinates to camera rotation
+                  const phi = THREE.MathUtils.degToRad(90 - lat);
+                  const theta = THREE.MathUtils.degToRad(lon);
+
+                  camera.position.x = 100 * Math.sin(phi) * Math.cos(theta);
+                  camera.position.y = 100 * Math.cos(phi);
+                  camera.position.z = 100 * Math.sin(phi) * Math.sin(theta);
+                  
+                  camera.lookAt(scene.position);
+                }
 
                 canvas.addEventListener('touchstart', (e) => {
                   isDragging = true;
@@ -133,14 +147,13 @@ export function PanoViewer({ imageUrl }: Props) {
                   const deltaX = touch.clientX - previousTouch.x;
                   const deltaY = touch.clientY - previousTouch.y;
 
-                  camera.rotation.y += deltaX * sensitivity;
-                  camera.rotation.x += deltaY * sensitivity;
+                  lon -= deltaX * 0.3;
+                  lat += deltaY * 0.3;
                   
-                  // Limit vertical rotation
-                  camera.rotation.x = Math.max(
-                    -Math.PI / 2,
-                    Math.min(Math.PI / 2, camera.rotation.x)
-                  );
+                  // Limit vertical rotation to prevent flipping
+                  lat = Math.max(-85, Math.min(85, lat));
+
+                  updateView();
 
                   previousTouch = { x: touch.clientX, y: touch.clientY };
                   e.preventDefault();
@@ -163,13 +176,12 @@ export function PanoViewer({ imageUrl }: Props) {
                   const deltaX = e.clientX - previousTouch.x;
                   const deltaY = e.clientY - previousTouch.y;
 
-                  camera.rotation.y += deltaX * sensitivity;
-                  camera.rotation.x += deltaY * sensitivity;
+                  lon -= deltaX * 0.3;
+                  lat += deltaY * 0.3;
                   
-                  camera.rotation.x = Math.max(
-                    -Math.PI / 2,
-                    Math.min(Math.PI / 2, camera.rotation.x)
-                  );
+                  lat = Math.max(-85, Math.min(85, lat));
+
+                  updateView();
 
                   previousTouch = { x: e.clientX, y: e.clientY };
                 });
@@ -177,6 +189,9 @@ export function PanoViewer({ imageUrl }: Props) {
                 canvas.addEventListener('mouseup', () => {
                   isMouseDown = false;
                 });
+
+                // Initial view
+                updateView();
 
                 // Render loop
                 function animate() {
