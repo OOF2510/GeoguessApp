@@ -277,3 +277,7 @@ See `LICENSE.md` for the full text.
 - **OpenRouter AI** for powering the AI Duel models.
 - The **React Native community** and all the open‑source libraries used here.
 - Friends, testers, and early players for constant feedback and support.
+
+---
+
+Made with ❤️ by [oof2510](https://oof2510.space) | [API Status](https://geo.api.oof2510.space/health)
