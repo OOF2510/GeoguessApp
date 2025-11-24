@@ -161,6 +161,7 @@ flowchart LR
   App -->|send App Check token| Firebase
 ```
 
+
 For deployment and API configuration details, see the `geoguess-api` repository.
 
 ---
