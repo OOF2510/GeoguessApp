@@ -148,22 +148,6 @@ High‑level flow:
   - Stores and reads scores from **MongoDB**.
   - Verifies **Firebase App Check** tokens on protected routes.
 
-```mermaid
-flowchart LR
-  App[GeoFinder App] -->|GET getImage| API[GeoGuess API Backend]
-
-  App -->|POST game start\nPOST game submit\nPOST ai-duel start\nPOST ai-duel guess| API
-
-  API -->|fetch image| Mapillary[Mapillary Street View]
-  API -->|geocode| Nominatim[OSM Nominatim BigDataCloud]
-  API -->|read write scores| MongoDB[MongoDB Leaderboard]
-
-  Firebase[Firebase App Check] -->|verify token| API
-  App -->|send App Check token| Firebase
-```
-
-
-
 
 For deployment and API configuration details, see the `geoguess-api` repository.
 
