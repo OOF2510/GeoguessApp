@@ -150,17 +150,18 @@ High‑level flow:
 
 ```mermaid
 flowchart LR
-  App[GeoFinder App (Mobile)] -->|GET /getImage| API[GeoGuess API (Backend)]
+  App[GeoFinder App] -->|GET getImage| API[GeoGuess API Backend]
 
-  App -->|"POST /game/start\nPOST /game/submit\nPOST /ai-duel/start\nPOST /ai-duel/guess"| API
+  App -->|POST game start\nPOST game submit\nPOST ai-duel start\nPOST ai-duel guess| API
 
   API -->|fetch image| Mapillary[Mapillary Street View]
-  API -->|geocode| Nominatim[OSM Nominatim / BigDataCloud]
-  API -->|read/write scores| MongoDB[MongoDB (Leaderboard)]
+  API -->|geocode| Nominatim[OSM Nominatim BigDataCloud]
+  API -->|read write scores| MongoDB[MongoDB Leaderboard]
 
   Firebase[Firebase App Check] -->|verify token| API
   App -->|send App Check token| Firebase
 ```
+
 
 
 
