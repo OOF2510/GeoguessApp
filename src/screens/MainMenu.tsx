@@ -492,8 +492,8 @@ const MainMenu: React.FC = () => {
                   AI models used for AI 1v1 provided by OpenRouter:
                   {'\n'}- Mistral Small 3.2 24B Instruct: licensed under
                   Apache-2.0 (see licenses)
-                  {'\n'}- Sherlock Dash Alpha: Cloaked model provided by OpenRouter
-                  {'\n'}- Qwen 2.5 VL 32b Instruct: licensed under
+                  {'\n'}- Google Gemma 3 27B: licenced under the Gemma licence (see licences)
+                  {'\n'}- Qwen 2.5 VL 32B Instruct: licensed under
                   Apache-2.0 (see licenses)
                 </Text>
               </View>
