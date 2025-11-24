@@ -151,7 +151,8 @@ High‑level flow:
 ```mermaid
 flowchart LR
   App[GeoFinder App (Mobile)] -->|GET /getImage| API[GeoGuess API (Backend)]
-  App -->|POST /game/start<br/>/game/submit<br/>/ai-duel/start<br/>/ai-duel/guess| API
+
+  App -->|"POST /game/start\nPOST /game/submit\nPOST /ai-duel/start\nPOST /ai-duel/guess"| API
 
   API -->|fetch image| Mapillary[Mapillary Street View]
   API -->|geocode| Nominatim[OSM Nominatim / BigDataCloud]
@@ -160,6 +161,7 @@ flowchart LR
   Firebase[Firebase App Check] -->|verify token| API
   App -->|send App Check token| Firebase
 ```
+
 
 
 For deployment and API configuration details, see the `geoguess-api` repository.
