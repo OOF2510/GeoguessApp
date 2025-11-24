@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   TouchableOpacity,
   Modal,
   BackHandler,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -27,6 +29,33 @@ import ImageViewer from 'react-native-image-zoom-viewer';
 import { scheduleSummaryModal, cancelSummaryModal } from '../utils/summaryTimer';
 
 const TOTAL_ROUNDS = 10;
+const GAME_STATE_STORAGE_KEY = 'geofinder.gameState.v1';
+const GAME_STATE_MAX_AGE_MS = 1000 * 60 * 60 * 8; // 8 hours
+
+type PersistedGameState = {
+  imageUrl: string | null;
+  country: string | null;
+  countryCode: string | null;
+  displayName: string | null;
+  coord: { lat: number; lon: number } | null;
+  contributor: string | null;
+  guess: string;
+  guessCount: number;
+  incorrectGuesses: string[];
+  feedback: string;
+  gameOver: boolean;
+  currentScore: number;
+  highScore: number;
+  nextRound: PrefetchedRound | null;
+  roundNumber: number;
+  correctAnswers: number;
+  completedRounds: number;
+  showGameSummary: boolean;
+  gameSessionId: string | null;
+  submitToLeaderboard: boolean;
+  isContinued: boolean;
+  savedAt?: number;
+};
 
 const GameScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -58,8 +87,10 @@ const GameScreen: React.FC = () => {
   const [showGameSummary, setShowGameSummary] = useState<boolean>(false);
   const [gameSessionId, setGameSessionId] = useState<string | null>(null);
   const summaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipPersistRef = useRef<boolean>(false);
   const [submitToLeaderboard, setSubmitToLeaderboard] = useState<boolean>(true);
   const [isContinued, setIsContinued] = useState<boolean>(false);
+  const lastStateRef = useRef<PersistedGameState | null>(null);
 
   const clearSummaryTimeout = (): void => {
     cancelSummaryModal(summaryTimeoutRef);
@@ -225,6 +256,128 @@ const GameScreen: React.FC = () => {
     startGame();
   };
 
+  const persistGameState = useCallback(async (): Promise<void> => {
+    const snapshot = lastStateRef.current;
+
+    if (!snapshot || !snapshot.imageUrl) {
+      try {
+        await AsyncStorage.removeItem(GAME_STATE_STORAGE_KEY);
+      } catch (error) {
+        console.error('Failed to clear saved game state:', error);
+      }
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem(
+        GAME_STATE_STORAGE_KEY,
+        JSON.stringify({
+          ...snapshot,
+          savedAt: Date.now(),
+        }),
+      );
+    } catch (error) {
+      console.error('Failed to persist game state:', error);
+    }
+  }, []);
+
+  const clearPersistedGameState = useCallback(async (): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(GAME_STATE_STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear saved game state:', error);
+    }
+  }, []);
+
+  const restorePersistedGameState = useCallback(async (): Promise<boolean> => {
+    try {
+      const raw = await AsyncStorage.getItem(GAME_STATE_STORAGE_KEY);
+      if (!raw) return false;
+
+      const parsed = JSON.parse(raw) as PersistedGameState;
+
+      if (
+        !parsed ||
+        typeof parsed !== 'object' ||
+        !parsed.imageUrl ||
+        typeof parsed.savedAt !== 'number'
+      ) {
+        await clearPersistedGameState();
+        return false;
+      }
+
+      const isExpired = Date.now() - parsed.savedAt > GAME_STATE_MAX_AGE_MS;
+      if (isExpired) {
+        await clearPersistedGameState();
+        return false;
+      }
+
+      setImageUrl(typeof parsed.imageUrl === 'string' ? parsed.imageUrl : null);
+      setCoord(
+        parsed.coord &&
+          typeof parsed.coord.lat === 'number' &&
+          typeof parsed.coord.lon === 'number'
+          ? { lat: parsed.coord.lat, lon: parsed.coord.lon }
+          : null,
+      );
+      setContributor(
+        typeof parsed.contributor === 'string' ? parsed.contributor : null,
+      );
+      setCountry(typeof parsed.country === 'string' ? parsed.country : null);
+      setCountryCode(
+        typeof parsed.countryCode === 'string' ? parsed.countryCode : null,
+      );
+      setDisplayName(
+        typeof parsed.displayName === 'string' ? parsed.displayName : null,
+      );
+      setGuess(typeof parsed.guess === 'string' ? parsed.guess : '');
+      setGuessCount(
+        Number.isFinite(parsed.guessCount) ? parsed.guessCount : 0,
+      );
+      setIncorrectGuesses(
+        Array.isArray(parsed.incorrectGuesses)
+          ? parsed.incorrectGuesses.filter(
+              (g: unknown): g is string => typeof g === 'string',
+            )
+          : [],
+      );
+      setFeedback(typeof parsed.feedback === 'string' ? parsed.feedback : '');
+      setGameOver(Boolean(parsed.gameOver));
+      setCurrentScore(
+        Number.isFinite(parsed.currentScore) ? parsed.currentScore : 0,
+      );
+      setHighScore(
+        Number.isFinite(parsed.highScore) ? parsed.highScore : highScore,
+      );
+      setRoundNumber(
+        Number.isFinite(parsed.roundNumber) ? parsed.roundNumber : 1,
+      );
+      setCorrectAnswers(
+        Number.isFinite(parsed.correctAnswers) ? parsed.correctAnswers : 0,
+      );
+      setCompletedRounds(
+        Number.isFinite(parsed.completedRounds) ? parsed.completedRounds : 0,
+      );
+      setShowGameSummary(Boolean(parsed.showGameSummary));
+      setGameSessionId(
+        typeof parsed.gameSessionId === 'string' ? parsed.gameSessionId : null,
+      );
+      setSubmitToLeaderboard(
+        typeof parsed.submitToLeaderboard === 'boolean'
+          ? parsed.submitToLeaderboard
+          : true,
+      );
+      setIsContinued(Boolean(parsed.isContinued));
+      setNextRound(parsed.nextRound ?? null);
+      setLoading(false);
+
+      return true;
+    } catch (error) {
+      console.error('Failed to restore saved game state:', error);
+      return false;
+    }
+  }, [clearPersistedGameState, highScore]);
+
   const storeGameSessionId = async (id: string): Promise<void> => {
     try {
       const existing = await AsyncStorage.getItem('gameSessionIds');
@@ -260,6 +413,7 @@ const GameScreen: React.FC = () => {
   };
 
   const handleReturnToMainMenu = async (): Promise<void> => {
+    skipPersistRef.current = true;
     if (submitToLeaderboard && gameSessionId && currentScore > 0) {
       try {
         await submitScore(gameSessionId, currentScore, {
@@ -275,6 +429,7 @@ const GameScreen: React.FC = () => {
     } else if (!submitToLeaderboard && currentScore > 0) {
       console.log('Skipping leaderboard submission per user choice');
     }
+    await clearPersistedGameState();
     clearSummaryTimeout();
     setShowGameSummary(false);
     navigation.navigate('MainMenu');
@@ -426,6 +581,54 @@ const GameScreen: React.FC = () => {
   });
 
   useEffect(() => {
+    lastStateRef.current = {
+      imageUrl,
+      country,
+      countryCode,
+      displayName,
+      coord,
+      contributor,
+      guess,
+      guessCount,
+      incorrectGuesses,
+      feedback,
+      gameOver,
+      currentScore,
+      highScore,
+      nextRound,
+      roundNumber,
+      correctAnswers,
+      completedRounds,
+      showGameSummary,
+      gameSessionId,
+      submitToLeaderboard,
+      isContinued,
+    };
+  }, [
+    imageUrl,
+    country,
+    countryCode,
+    displayName,
+    coord,
+    contributor,
+    guess,
+    guessCount,
+    incorrectGuesses,
+    feedback,
+    gameOver,
+    currentScore,
+    highScore,
+    nextRound,
+    roundNumber,
+    correctAnswers,
+    completedRounds,
+    showGameSummary,
+    gameSessionId,
+    submitToLeaderboard,
+    isContinued,
+  ]);
+
+  useEffect(() => {
     const backAction = () => {
       if (zoomImage) {
         setZoomImage(false);
@@ -456,9 +659,46 @@ const GameScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    initializeGameSession();
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        clearSummaryTimeout();
+        if (!skipPersistRef.current) {
+          persistGameState();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [persistGameState]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const bootstrap = async () => {
+      const restored = await restorePersistedGameState();
+      if (!isMounted) return;
+
+      if (restored) {
+        setLoading(false);
+        prefetchNextRound();
+        return;
+      }
+
+      await clearPersistedGameState();
+      initializeGameSession();
+    };
+
+    bootstrap();
+
     return () => {
+      isMounted = false;
       clearSummaryTimeout();
+      if (!skipPersistRef.current) {
+        persistGameState();
+      } else {
+        skipPersistRef.current = false;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
