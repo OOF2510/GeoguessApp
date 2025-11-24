@@ -2,7 +2,7 @@
   "name": "geoguessapp",
   "author": "OOF2510",
   "license": "MPL-2.0",
-  "version": "1.2.0-beta",
+  "version": "1.5.0-beta",
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
@@ -40,6 +40,7 @@
     "@react-native-community/cli-platform-ios": "20.0.0",
     "@react-native/babel-preset": "0.82.1",
     "@react-native/eslint-config": "0.82.1",
+    "@react-native/gradle-plugin": "0.82.1",
     "@react-native/metro-config": "0.82.1",
     "@react-native/typescript-config": "0.82.1",
     "@types/base-64": "^1.0.2",
@@ -54,5 +55,6 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "packageManager": "pnpm@10.23.0"
 }

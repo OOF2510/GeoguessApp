@@ -7,4 +7,11 @@ const { getDefaultConfig } = require('@react-native/metro-config');
  * @type {import('@react-native/metro-config').MetroConfig}
  */
 
-module.exports = getDefaultConfig(__dirname);
+const config = getDefaultConfig(__dirname);
+
+config.resolver = {
+  ...config.resolver,
+  unstable_enableSymlinks: true,
+};
+
+module.exports = config;
