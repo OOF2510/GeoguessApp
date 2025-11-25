@@ -166,7 +166,13 @@ jobs:
           for s in "${LINES[@]}"; do
             # Basic cleanup of common prefixes
             s="${s%.*}"
-            s="${s#feat: }"; s="${s#fix: }"; s="${s#perf: }"; s="${s#refactor: }"; s="${s#chore: }"; s="${s#docs: }"; s="${s#build: }"; s="${s#ci: }"
+            s="${s#feat: }"
+            s="${s#fix: }"
+            s="${s#perf: }"
+            s="${s#chore: }"
+            s="${s#docs: }"
+            s="${s#build: }"
+            s="${s#ci: }"
             [[ -z "$s" ]] && continue
             [[ "$s" == Merge\ * ]] && continue
             summaries+=("$s")
