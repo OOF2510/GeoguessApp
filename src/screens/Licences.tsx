@@ -40,12 +40,16 @@ const Licences: React.FC = () => {
         <Text style={styles.title}>Licenses</Text>
         <View style={styles.placeholder} />
       </View>
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.content}
+      >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mapillary Images</Text>
           <Text style={styles.licenseText}>
             Images provided via Mapillary, licensed under CC-BY-SA 4.0.{'\n'}
-            For more details: {renderLink('https://www.mapillary.com/app/licenses')}
+            For more details:{' '}
+            {renderLink('https://www.mapillary.com/app/licenses')}
           </Text>
         </View>
 
@@ -53,39 +57,52 @@ const Licences: React.FC = () => {
           <Text style={styles.sectionTitle}>OpenStreetMap Data</Text>
           <Text style={styles.licenseText}>
             Map data provided by OpenStreetMap, licensed under ODbL 1.0.{'\n'}
-            For more details: {renderLink('https://www.openstreetmap.org/copyright')}
+            For more details:{' '}
+            {renderLink('https://www.openstreetmap.org/copyright')}
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Fallback Map Data</Text>
           <Text style={styles.licenseText}>
-            Fallback map data provided by:{'\n'}
-            - {renderLink('https://www.bigdatacloud.com/terms', 'BigDataCloud (CC-BY-4.0)')}{'\n'}
-            - {renderLink('https://www.openmetromaps.org', 'Open-Metro (CC-BY-4.0)')}{'\n'}
-            - Geonames ({renderLink('http://creativecommons.org/licenses/by-sa/4.0/', 'CC-BY-SA 4.0')})
+            Fallback map data provided by:{'\n'}-{' '}
+            {renderLink(
+              'https://www.bigdatacloud.com/terms',
+              'BigDataCloud (CC-BY-4.0)',
+            )}
+            {'\n'}-{' '}
+            {renderLink(
+              'https://www.openmetromaps.org',
+              'Open-Metro (CC-BY-4.0)',
+            )}
+            {'\n'}- Geonames (
+            {renderLink(
+              'http://creativecommons.org/licenses/by-sa/4.0/',
+              'CC-BY-SA 4.0',
+            )}
+            )
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>AI Models</Text>
           <Text style={styles.licenseText}>
-            AI models used for AI 1v1 provided by OpenRouter:{'\n'}
-            - Mistral Small 3.2 24B Instruct: licensed under Apache-2.0{'\n'}
-            - Google Gemma 3 27B: Gemma is provided under and subject to the Gemma Terms of Use found at {renderLink('https://ai.google.dev/gemma/terms')}
-            - Qwen 2.5 VL 32B Instruct: licensed under Apache-2.0{'\n'}
-            For more details on Apache-2.0: {renderLink('https://www.apache.org/licenses/LICENSE-2.0')}
+            AI models used for AI 1v1 provided by OpenRouter:{'\n'}- Mistral
+            Small 3.2 24B Instruct: licensed under Apache-2.0{'\n'}- Google
+            Gemma 3 27B: Gemma is provided under and subject to the Gemma Terms
+            of Use found at {renderLink('https://ai.google.dev/gemma/terms')}-
+            Qwen 2.5 VL 32B Instruct: licensed under Apache-2.0{'\n'}
+            For more details on Apache-2.0:{' '}
+            {renderLink('https://www.apache.org/licenses/LICENSE-2.0')}
           </Text>
         </View>
-
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Libraries</Text>
           <Text style={styles.licenseText}>
-            This app uses the following open-source libraries:{'\n'}
-            - React Native: MIT License{'\n'}
-            - React Navigation: MIT License{'\n'}
-            - And others as per their package.json files.{'\n'}
+            This app uses the following open-source libraries:{'\n'}- React
+            Native: MIT License{'\n'}- React Navigation: MIT License{'\n'}- And
+            others as per their package.json files.{'\n'}
             {'\n'}
             For full licenses, refer to{' '}
             {renderLink(

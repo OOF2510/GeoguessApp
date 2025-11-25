@@ -9,7 +9,9 @@ type Props = {
 const BACKEND_URL = 'https://geo.api.oof2510.space';
 
 export function PanoViewer({ imageUrl }: Props) {
-  const proxiedUrl = `${BACKEND_URL}/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+  const proxiedUrl = `${BACKEND_URL}/proxy-image?url=${encodeURIComponent(
+    imageUrl,
+  )}`;
 
   const html = `
     <!DOCTYPE html>
@@ -234,11 +236,11 @@ export function PanoViewer({ imageUrl }: Props) {
         allowUniversalAccessFromFileURLs={true}
         mixedContentMode="always"
         cacheEnabled={true}
-        onError={(syntheticEvent) => {
+        onError={syntheticEvent => {
           const { nativeEvent } = syntheticEvent;
           console.error('WebView error:', nativeEvent);
         }}
-        onMessage={(event) => {
+        onMessage={event => {
           console.log('[PanoViewer]:', event.nativeEvent.data);
         }}
       />

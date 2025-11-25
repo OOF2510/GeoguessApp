@@ -14,14 +14,22 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
-import { NavigationProp, RootStackParamList } from '../navigation/navigationTypes';
 import {
-  normalizeCountry,
-  matchGuess,
-} from '../services/geoApiUtils';
-import { geoApiClient, getAppCheckToken, startGameSession, submitScore } from '../services/leaderAuthUtils';
+  NavigationProp,
+  RootStackParamList,
+} from '../navigation/navigationTypes';
+import { normalizeCountry, matchGuess } from '../services/geoApiUtils';
+import {
+  geoApiClient,
+  getAppCheckToken,
+  startGameSession,
+  submitScore,
+} from '../services/leaderAuthUtils';
 import { PanoViewer } from '../utils/panoViewer';
-import { scheduleSummaryModal, cancelSummaryModal } from '../utils/summaryTimer';
+import {
+  scheduleSummaryModal,
+  cancelSummaryModal,
+} from '../utils/summaryTimer';
 
 const TOTAL_ROUNDS = 10;
 
@@ -51,9 +59,9 @@ const getPano = async (): Promise<PanoRound | null> => {
   try {
     const token = await getAppCheckToken();
     geoApiClient.setAppCheckToken(token || null);
-    
-    const data = await geoApiClient.getPano()
-    
+
+    const data = await geoApiClient.getPano();
+
     if (!data || !data.imageUrl || !data.coordinates) {
       throw new Error('Invalid API response');
     }
@@ -625,11 +633,11 @@ const PanoGameScreen: React.FC = () => {
                     paddingHorizontal: 16,
                     paddingVertical: 8,
                     borderRadius: 16,
-                    backgroundColor: submitToLeaderboard ? '#4CAF50' : '#9E9E9E',
+                    backgroundColor: submitToLeaderboard
+                      ? '#4CAF50'
+                      : '#9E9E9E',
                   }}
-                  onPress={() =>
-                    setSubmitToLeaderboard(prev => !prev)
-                  }
+                  onPress={() => setSubmitToLeaderboard(prev => !prev)}
                 >
                   <Text style={{ color: '#FFFFFF', fontSize: 14 }}>
                     {submitToLeaderboard
@@ -650,7 +658,11 @@ const PanoGameScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[styles.button, { backgroundColor: '#2196F3' }]}
                   onPress={async () => {
-                    if (submitToLeaderboard && gameSessionId && currentScore > 0) {
+                    if (
+                      submitToLeaderboard &&
+                      gameSessionId &&
+                      currentScore > 0
+                    ) {
                       try {
                         await submitScore(gameSessionId, currentScore, {
                           correctAnswers,
@@ -690,18 +702,14 @@ const PanoGameScreen: React.FC = () => {
                     }
                   }}
                 >
-                  <Text style={styles.buttonText}>
-                    New Game
-                  </Text>
+                  <Text style={styles.buttonText}>New Game</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                   style={[styles.button, { backgroundColor: '#F44336' }]}
-                   onPress={handleReturnToMainMenu}
-                 >
-                   <Text style={styles.buttonText}>
-                     Return to Main Menu
-                   </Text>
-                 </TouchableOpacity>
+                  style={[styles.button, { backgroundColor: '#F44336' }]}
+                  onPress={handleReturnToMainMenu}
+                >
+                  <Text style={styles.buttonText}>Return to Main Menu</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>

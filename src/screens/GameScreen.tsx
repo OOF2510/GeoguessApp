@@ -17,7 +17,10 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
-import { NavigationProp, RootStackParamList } from '../navigation/navigationTypes';
+import {
+  NavigationProp,
+  RootStackParamList,
+} from '../navigation/navigationTypes';
 import {
   getImageWithCountry,
   normalizeCountry,
@@ -26,7 +29,10 @@ import {
 import type { PrefetchedRound } from '../services/geoApiUtils';
 import { startGameSession, submitScore } from '../services/leaderAuthUtils';
 import ImageViewer from 'react-native-image-zoom-viewer';
-import { scheduleSummaryModal, cancelSummaryModal } from '../utils/summaryTimer';
+import {
+  scheduleSummaryModal,
+  cancelSummaryModal,
+} from '../utils/summaryTimer';
 
 const TOTAL_ROUNDS = 10;
 const GAME_STATE_STORAGE_KEY = 'geofinder.gameState.v1';
@@ -331,9 +337,7 @@ const GameScreen: React.FC = () => {
         typeof parsed.displayName === 'string' ? parsed.displayName : null,
       );
       setGuess(typeof parsed.guess === 'string' ? parsed.guess : '');
-      setGuessCount(
-        Number.isFinite(parsed.guessCount) ? parsed.guessCount : 0,
-      );
+      setGuessCount(Number.isFinite(parsed.guessCount) ? parsed.guessCount : 0);
       setIncorrectGuesses(
         Array.isArray(parsed.incorrectGuesses)
           ? parsed.incorrectGuesses.filter(
@@ -668,7 +672,10 @@ const GameScreen: React.FC = () => {
       }
     };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
     return () => subscription.remove();
   }, [persistGameState]);
 
@@ -825,11 +832,11 @@ const GameScreen: React.FC = () => {
                     paddingHorizontal: 16,
                     paddingVertical: 8,
                     borderRadius: 16,
-                    backgroundColor: submitToLeaderboard ? '#4CAF50' : '#9E9E9E',
+                    backgroundColor: submitToLeaderboard
+                      ? '#4CAF50'
+                      : '#9E9E9E',
                   }}
-                  onPress={() =>
-                    setSubmitToLeaderboard(prev => !prev)
-                  }
+                  onPress={() => setSubmitToLeaderboard(prev => !prev)}
                 >
                   <Text style={{ color: '#FFFFFF', fontSize: 14 }}>
                     {submitToLeaderboard
@@ -850,7 +857,11 @@ const GameScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[styles.button, { backgroundColor: '#2196F3' }]}
                   onPress={async () => {
-                    if (submitToLeaderboard && gameSessionId && currentScore > 0) {
+                    if (
+                      submitToLeaderboard &&
+                      gameSessionId &&
+                      currentScore > 0
+                    ) {
                       try {
                         await submitScore(gameSessionId, currentScore, {
                           correctAnswers,
@@ -890,18 +901,14 @@ const GameScreen: React.FC = () => {
                     }
                   }}
                 >
-                  <Text style={styles.buttonText}>
-                    New Game
-                  </Text>
+                  <Text style={styles.buttonText}>New Game</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                   style={[styles.button, { backgroundColor: '#F44336' }]}
-                   onPress={handleReturnToMainMenu}
-                 >
-                   <Text style={styles.buttonText}>
-                     Return to Main Menu
-                   </Text>
-                 </TouchableOpacity>
+                  style={[styles.button, { backgroundColor: '#F44336' }]}
+                  onPress={handleReturnToMainMenu}
+                >
+                  <Text style={styles.buttonText}>Return to Main Menu</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>

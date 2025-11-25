@@ -1,6 +1,8 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
-export type SummaryTimerRef = MutableRefObject<ReturnType<typeof setTimeout> | null>;
+export type SummaryTimerRef = MutableRefObject<ReturnType<
+  typeof setTimeout
+> | null>;
 
 export const SUMMARY_MODAL_DELAY_MS = 2000;
 

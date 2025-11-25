@@ -375,7 +375,10 @@ const MainMenu: React.FC = () => {
         <TouchableOpacity style={styles.aiButton} onPress={handleStartAiGame}>
           <Text style={styles.buttonText}>Play vs AI</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.panoButton} onPress={handleStartPanoGame}>
+        <TouchableOpacity
+          style={styles.panoButton}
+          onPress={handleStartPanoGame}
+        >
           <Text style={styles.buttonText}>360° Mode</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -421,7 +424,8 @@ const MainMenu: React.FC = () => {
                       key={index}
                       style={[
                         leaderboardStyles.leaderboardEntry,
-                        isUserScore && leaderboardStyles.leaderboardEntryHighlight,
+                        isUserScore &&
+                          leaderboardStyles.leaderboardEntryHighlight,
                       ]}
                     >
                       <Text style={leaderboardStyles.rankText}>
@@ -436,7 +440,9 @@ const MainMenu: React.FC = () => {
                         </Text>
                         {isUserScore ? (
                           <View style={leaderboardStyles.userBadge}>
-                            <Text style={leaderboardStyles.userBadgeText}>You</Text>
+                            <Text style={leaderboardStyles.userBadgeText}>
+                              You
+                            </Text>
                           </View>
                         ) : null}
                       </View>
@@ -485,16 +491,17 @@ const MainMenu: React.FC = () => {
                   {'\n'}
                   Map data provided by OpenStreetMap, licensed under ODbL.
                   {'\n'}
-                  Fallback map data provided by BigDataCloud, Open-Metro (CC-BY-4.0), and
-                  Geonames (CC-BY-SA)
+                  Fallback map data provided by BigDataCloud, Open-Metro
+                  (CC-BY-4.0), and Geonames (CC-BY-SA)
                   {'\n'}
                   {'\n'}
                   AI models used for AI 1v1 provided by OpenRouter:
                   {'\n'}- Mistral Small 3.2 24B Instruct: licensed under
                   Apache-2.0 (see licenses)
-                  {'\n'}- Google Gemma 3 27B: licenced under the Gemma licence (see licences)
-                  {'\n'}- Qwen 2.5 VL 32B Instruct: licensed under
-                  Apache-2.0 (see licenses)
+                  {'\n'}- Google Gemma 3 27B: licenced under the Gemma licence
+                  (see licences)
+                  {'\n'}- Qwen 2.5 VL 32B Instruct: licensed under Apache-2.0
+                  (see licenses)
                 </Text>
               </View>
             </ScrollView>

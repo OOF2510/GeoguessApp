@@ -27,7 +27,10 @@ import {
   startAiMatch,
   submitAiGuess,
 } from '../services/aiDuelUtils';
-import { NavigationProp, RootStackParamList } from '../navigation/navigationTypes';
+import {
+  NavigationProp,
+  RootStackParamList,
+} from '../navigation/navigationTypes';
 
 const formatCountry = (value?: string | null): string => {
   if (!value) return 'Unknown';
