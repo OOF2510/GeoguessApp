@@ -686,7 +686,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   titleContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 14,
