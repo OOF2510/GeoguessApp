@@ -12,6 +12,8 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '../navigation/navigationTypes';
@@ -35,6 +37,16 @@ const backgroundImages: ImageSourcePropType[] = [
   require('../../assets/bg10.jpg'),
   require('../../assets/bg11.jpg'),
 ];
+
+const MAIN_MENU_STATE_KEY = 'geofinder.mainMenuState.v1';
+const MAIN_MENU_STATE_MAX_AGE_MS = 1000 * 60 * 60 * 8; // 8 hours
+
+type PersistedMainMenuState = {
+  prefetchedRound: PrefetchedRound | null;
+  currentIndex: number;
+  cachedImages: number[];
+  savedAt?: number;
+};
 
 const MainMenu: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -62,6 +74,8 @@ const MainMenu: React.FC = () => {
   const [userGameSessionIds, setUserGameSessionIds] = useState<Set<string>>(
     () => new Set<string>(),
   );
+  const lastStateRef = useRef<PersistedMainMenuState | null>(null);
+  const skipPersistRef = useRef<boolean>(false);
 
   // Preload images on component mount
   useEffect(() => {
@@ -74,9 +88,6 @@ const MainMenu: React.FC = () => {
     };
 
     preloadImages();
-
-    // Load cached images from storage
-    loadCachedImages();
   }, []);
 
   const prefetchInitialRound = useCallback(async () => {
@@ -101,14 +112,65 @@ const MainMenu: React.FC = () => {
     }
     isPrefetchingRef.current = false;
   }, []);
-
-  useEffect(() => {
-    prefetchInitialRound();
-  }, [prefetchInitialRound]);
-
   useEffect(() => {
     prefetchedRoundRef.current = prefetchedRound;
   }, [prefetchedRound]);
+
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        if (!skipPersistRef.current) {
+          persistMainMenuState();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
+    return () => subscription.remove();
+  }, [persistMainMenuState]);
+
+  useEffect(() => {
+    lastStateRef.current = {
+      prefetchedRound,
+      currentIndex,
+      cachedImages,
+    };
+  }, [prefetchedRound, currentIndex, cachedImages]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const bootstrap = async () => {
+      const restored = await restorePersistedMainMenuState();
+      if (!isMounted) return;
+
+      if (!restored) {
+        await clearPersistedMainMenuState();
+        await loadCachedImages();
+        prefetchInitialRound();
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      isMounted = false;
+      if (!skipPersistRef.current) {
+        persistMainMenuState();
+      } else {
+        skipPersistRef.current = false;
+      }
+    };
+  }, [
+    clearPersistedMainMenuState,
+    loadCachedImages,
+    persistMainMenuState,
+    prefetchInitialRound,
+    restorePersistedMainMenuState,
+  ]);
 
   const loadUserGameSessionIds = useCallback(async (): Promise<Set<string>> => {
     try {
@@ -133,7 +195,69 @@ const MainMenu: React.FC = () => {
     }
   }, []);
 
-  const loadCachedImages = async () => {
+  const persistMainMenuState = useCallback(async (): Promise<void> => {
+    const snapshot = lastStateRef.current;
+
+    if (!snapshot) {
+      try {
+        await AsyncStorage.removeItem(MAIN_MENU_STATE_KEY);
+      } catch (error) {
+        console.error('Failed to clear main menu state:', error);
+      }
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem(
+        MAIN_MENU_STATE_KEY,
+        JSON.stringify({ ...snapshot, savedAt: Date.now() }),
+      );
+    } catch (error) {
+      console.error('Failed to persist main menu state:', error);
+    }
+  }, []);
+
+  const clearPersistedMainMenuState = useCallback(async (): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(MAIN_MENU_STATE_KEY);
+    } catch (error) {
+      console.error('Failed to clear main menu state:', error);
+    }
+  }, []);
+
+  const restorePersistedMainMenuState = useCallback(async (): Promise<boolean> => {
+    try {
+      const raw = await AsyncStorage.getItem(MAIN_MENU_STATE_KEY);
+      if (!raw) return false;
+
+      const parsed = JSON.parse(raw) as PersistedMainMenuState;
+      if (!parsed || typeof parsed.savedAt !== 'number') {
+        await clearPersistedMainMenuState();
+        return false;
+      }
+
+      const isExpired = Date.now() - parsed.savedAt > MAIN_MENU_STATE_MAX_AGE_MS;
+      if (isExpired) {
+        await clearPersistedMainMenuState();
+        return false;
+      }
+
+      setPrefetchedRound(parsed.prefetchedRound ?? null);
+      prefetchedRoundRef.current = parsed.prefetchedRound ?? null;
+      setCachedImages(
+        Array.isArray(parsed.cachedImages) ? parsed.cachedImages : [],
+      );
+      setCurrentIndex(
+        Number.isFinite(parsed.currentIndex) ? parsed.currentIndex : 0,
+      );
+      return true;
+    } catch (error) {
+      console.error('Failed to restore main menu state:', error);
+      return false;
+    }
+  }, [clearPersistedMainMenuState]);
+
+  const loadCachedImages = useCallback(async () => {
     try {
       const filePath = `${RNFS.CachesDirectoryPath}/lastUsedImages.json`;
       const exists = await RNFS.exists(filePath);
@@ -157,7 +281,7 @@ const MainMenu: React.FC = () => {
       const initialIndex = getRandomBackgroundImage();
       setCurrentIndex(initialIndex);
     }
-  };
+  }, [cachedImages]);
 
   const saveCachedImages = async (newCache: number[]) => {
     try {

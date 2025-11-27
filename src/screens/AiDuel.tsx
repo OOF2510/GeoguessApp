@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,15 @@ import {
   ActivityIndicator,
   BackHandler,
   Modal,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import type { PrefetchedRound } from '../services/geoApiUtils';
 import { normalizeCountry } from '../services/geoApiUtils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   AiDuelApiError,
   AiDuelGuessResponse,
@@ -62,6 +65,24 @@ const formatCoordinates = (
 };
 
 const DEFAULT_SCORES: AiDuelScores = { player: 0, ai: 0 };
+const STATE_STORAGE_KEY = 'geofinder.aiDuelState.v1';
+const STATE_MAX_AGE_MS = 1000 * 60 * 60 * 8; // 8 hours
+
+type PersistedAiDuelState = {
+  matchId: string | null;
+  currentRound: AiDuelRound | null;
+  queuedRound: AiDuelRound | null;
+  totalRounds: number;
+  scores: AiDuelScores;
+  status: AiDuelStatus;
+  guess: string;
+  latestResult: AiDuelGuessResponse | null;
+  history: AiDuelHistoryEntry[];
+  prefetchedImageUrl: string | null;
+  prefetchedRoundUrl: string | null;
+  errorMessage: string;
+  savedAt?: number;
+};
 
 const AiDuel: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -89,6 +110,7 @@ const AiDuel: React.FC = () => {
   const [prefetchedImageUrl, setPrefetchedImageUrl] = useState<string | null>(
     prefetchedRoundUrl,
   );
+  const lastStateRef = useRef<PersistedAiDuelState | null>(null);
 
   useEffect(() => {
     setPrefetchedImageUrl(prefetchedRoundUrl);
@@ -106,8 +128,116 @@ const AiDuel: React.FC = () => {
     setMatchId(null);
   }, []);
 
+  useEffect(() => {
+    lastStateRef.current = {
+      matchId,
+      currentRound,
+      queuedRound,
+      totalRounds,
+      scores,
+      status,
+      guess,
+      latestResult,
+      history,
+      prefetchedImageUrl,
+      prefetchedRoundUrl,
+      errorMessage,
+    };
+  }, [
+    currentRound,
+    errorMessage,
+    guess,
+    history,
+    latestResult,
+    matchId,
+    prefetchedImageUrl,
+    prefetchedRoundUrl,
+    queuedRound,
+    scores,
+    status,
+    totalRounds,
+  ]);
+
+  const persistAiDuelState = useCallback(async (): Promise<void> => {
+    const snapshot = lastStateRef.current;
+
+    if (
+      !snapshot ||
+      (!snapshot.matchId && !snapshot.prefetchedImageUrl && !snapshot.currentRound)
+    ) {
+      try {
+        await AsyncStorage.removeItem(STATE_STORAGE_KEY);
+      } catch (error) {
+        console.error('Failed to clear saved AI duel state:', error);
+      }
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem(
+        STATE_STORAGE_KEY,
+        JSON.stringify({ ...snapshot, savedAt: Date.now() }),
+      );
+    } catch (error) {
+      console.error('Failed to persist AI duel state:', error);
+    }
+  }, []);
+
+  const clearPersistedAiDuelState = useCallback(async (): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(STATE_STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear saved AI duel state:', error);
+    }
+  }, []);
+
+  const restorePersistedAiDuelState = useCallback(async (): Promise<boolean> => {
+    try {
+      const raw = await AsyncStorage.getItem(STATE_STORAGE_KEY);
+      if (!raw) return false;
+
+      const parsed = JSON.parse(raw) as PersistedAiDuelState;
+      if (!parsed || typeof parsed.savedAt !== 'number') {
+        await clearPersistedAiDuelState();
+        return false;
+      }
+
+      const isExpired = Date.now() - parsed.savedAt > STATE_MAX_AGE_MS;
+      if (isExpired) {
+        await clearPersistedAiDuelState();
+        return false;
+      }
+
+      setMatchId(typeof parsed.matchId === 'string' ? parsed.matchId : null);
+      setCurrentRound(parsed.currentRound ?? null);
+      setQueuedRound(parsed.queuedRound ?? null);
+      setTotalRounds(Number.isFinite(parsed.totalRounds) ? parsed.totalRounds : 0);
+      setScores(parsed.scores ?? { ...DEFAULT_SCORES });
+      setStatus(parsed.status ?? 'in-progress');
+      setGuess(typeof parsed.guess === 'string' ? parsed.guess : '');
+      setLatestResult(parsed.latestResult ?? null);
+      setHistory(Array.isArray(parsed.history) ? parsed.history : []);
+      setPrefetchedImageUrl(
+        typeof parsed.prefetchedImageUrl === 'string'
+          ? parsed.prefetchedImageUrl
+          : parsed.prefetchedRoundUrl ?? null,
+      );
+      setErrorMessage(
+        typeof parsed.errorMessage === 'string' ? parsed.errorMessage : '',
+      );
+      setLoading(false);
+      setSubmitting(false);
+      setZoomImage(false);
+      return Boolean(parsed.matchId || parsed.currentRound);
+    } catch (error) {
+      console.error('Failed to restore AI duel state:', error);
+      return false;
+    }
+  }, [clearPersistedAiDuelState]);
+
   const bootstrap = useCallback(async (): Promise<void> => {
     setLoading(true);
+    await clearPersistedAiDuelState();
     resetState();
     try {
       const response = await startAiMatch();
@@ -131,11 +261,44 @@ const AiDuel: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [resetState]);
+  }, [clearPersistedAiDuelState, resetState]);
 
   useEffect(() => {
-    bootstrap();
-  }, [bootstrap]);
+    let isMounted = true;
+
+    const hydrate = async () => {
+      const restored = await restorePersistedAiDuelState();
+      if (!isMounted) return;
+
+      if (!restored) {
+        await bootstrap();
+      } else {
+        setLoading(false);
+        setSubmitting(false);
+      }
+    };
+
+    hydrate();
+
+    return () => {
+      isMounted = false;
+      persistAiDuelState();
+    };
+  }, [bootstrap, persistAiDuelState, restorePersistedAiDuelState]);
+
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        persistAiDuelState();
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
+    return () => subscription.remove();
+  }, [persistAiDuelState]);
 
   useEffect(() => {
     const backAction = (): boolean => {
@@ -285,12 +448,14 @@ const AiDuel: React.FC = () => {
   }, [queuedRound]);
 
   const handleRematch = useCallback((): void => {
+    clearPersistedAiDuelState();
     bootstrap();
-  }, [bootstrap]);
+  }, [bootstrap, clearPersistedAiDuelState]);
 
   const handleReturnToMenu = useCallback((): void => {
+    clearPersistedAiDuelState();
     navigation.navigate('MainMenu');
-  }, [navigation]);
+  }, [clearPersistedAiDuelState, navigation]);
 
   return (
     <View style={styles.container}>

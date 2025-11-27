@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   TouchableOpacity,
   Modal,
   BackHandler,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -32,6 +34,8 @@ import {
 } from '../utils/summaryTimer';
 
 const TOTAL_ROUNDS = 10;
+const GAME_STATE_STORAGE_KEY = 'geofinder.panoGameState.v1';
+const GAME_STATE_MAX_AGE_MS = 1000 * 60 * 60 * 8; // 8 hours
 
 // Interface for panorama data
 interface PanoResult {
@@ -52,6 +56,31 @@ interface CountryInfo {
 type PanoRound = {
   pano: PanoResult;
   countryInfo: CountryInfo | null;
+};
+
+type PersistedPanoState = {
+  panoramaUrl: string | null;
+  country: string | null;
+  countryCode: string | null;
+  displayName: string | null;
+  coord: { lat: number; lon: number } | null;
+  contributor: string | null;
+  guess: string;
+  guessCount: number;
+  incorrectGuesses: string[];
+  feedback: string;
+  gameOver: boolean;
+  currentScore: number;
+  highScore: number;
+  nextRound: PanoRound | null;
+  roundNumber: number;
+  correctAnswers: number;
+  completedRounds: number;
+  showGameSummary: boolean;
+  gameSessionId: string | null;
+  submitToLeaderboard: boolean;
+  isContinued: boolean;
+  savedAt?: number;
 };
 
 // Function to fetch panorama data
@@ -132,6 +161,8 @@ const PanoGameScreen: React.FC = () => {
   const summaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [submitToLeaderboard, setSubmitToLeaderboard] = useState<boolean>(true);
   const [isContinued, setIsContinued] = useState<boolean>(false);
+  const skipPersistRef = useRef<boolean>(false);
+  const lastStateRef = useRef<PersistedPanoState | null>(null);
 
   const clearSummaryTimeout = (): void => {
     cancelSummaryModal(summaryTimeoutRef);
@@ -297,6 +328,115 @@ const PanoGameScreen: React.FC = () => {
     startGame();
   };
 
+  const persistGameState = useCallback(async (): Promise<void> => {
+    const snapshot = lastStateRef.current;
+
+    if (!snapshot || !snapshot.panoramaUrl) {
+      try {
+        await AsyncStorage.removeItem(GAME_STATE_STORAGE_KEY);
+      } catch (error) {
+        console.error('Failed to clear saved pano game state:', error);
+      }
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem(
+        GAME_STATE_STORAGE_KEY,
+        JSON.stringify({ ...snapshot, savedAt: Date.now() }),
+      );
+    } catch (error) {
+      console.error('Failed to persist pano game state:', error);
+    }
+  }, []);
+
+  const clearPersistedGameState = useCallback(async (): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(GAME_STATE_STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear saved pano game state:', error);
+    }
+  }, []);
+
+  const restorePersistedGameState = useCallback(async (): Promise<boolean> => {
+    try {
+      const raw = await AsyncStorage.getItem(GAME_STATE_STORAGE_KEY);
+      if (!raw) return false;
+
+      const parsed = JSON.parse(raw) as PersistedPanoState;
+      if (
+        !parsed ||
+        typeof parsed !== 'object' ||
+        !parsed.panoramaUrl ||
+        typeof parsed.savedAt !== 'number'
+      ) {
+        await clearPersistedGameState();
+        return false;
+      }
+
+      const isExpired = Date.now() - parsed.savedAt > GAME_STATE_MAX_AGE_MS;
+      if (isExpired) {
+        await clearPersistedGameState();
+        return false;
+      }
+
+      setimageUrl(
+        typeof parsed.panoramaUrl === 'string' ? parsed.panoramaUrl : null,
+      );
+      setCoord(
+        parsed.coord &&
+          typeof parsed.coord.lat === 'number' &&
+          typeof parsed.coord.lon === 'number'
+          ? { lat: parsed.coord.lat, lon: parsed.coord.lon }
+          : null,
+      );
+      setContributor(
+        typeof parsed.contributor === 'string' ? parsed.contributor : null,
+      );
+      setCountry(typeof parsed.country === 'string' ? parsed.country : null);
+      setCountryCode(
+        typeof parsed.countryCode === 'string' ? parsed.countryCode : null,
+      );
+      setDisplayName(
+        typeof parsed.displayName === 'string' ? parsed.displayName : null,
+      );
+      setGuess(typeof parsed.guess === 'string' ? parsed.guess : '');
+      setGuessCount(Number.isFinite(parsed.guessCount) ? parsed.guessCount : 0);
+      setIncorrectGuesses(
+        Array.isArray(parsed.incorrectGuesses) ? parsed.incorrectGuesses : [],
+      );
+      setFeedback(typeof parsed.feedback === 'string' ? parsed.feedback : '');
+      setGameOver(Boolean(parsed.gameOver));
+      setCurrentScore(
+        Number.isFinite(parsed.currentScore) ? parsed.currentScore : 0,
+      );
+      setHighScore(Number.isFinite(parsed.highScore) ? parsed.highScore : 0);
+      setNextRound(parsed.nextRound ?? null);
+      setRoundNumber(Number.isFinite(parsed.roundNumber) ? parsed.roundNumber : 1);
+      setCorrectAnswers(
+        Number.isFinite(parsed.correctAnswers) ? parsed.correctAnswers : 0,
+      );
+      setCompletedRounds(
+        Number.isFinite(parsed.completedRounds) ? parsed.completedRounds : 0,
+      );
+      setShowGameSummary(Boolean(parsed.showGameSummary));
+      setGameSessionId(
+        typeof parsed.gameSessionId === 'string' ? parsed.gameSessionId : null,
+      );
+      setSubmitToLeaderboard(
+        typeof parsed.submitToLeaderboard === 'boolean'
+          ? parsed.submitToLeaderboard
+          : true,
+      );
+      setIsContinued(Boolean(parsed.isContinued));
+      setLoading(false);
+      return true;
+    } catch (error) {
+      console.error('Failed to restore pano game state:', error);
+      return false;
+    }
+  }, [clearPersistedGameState]);
+
   const storeGameSessionId = async (id: string): Promise<void> => {
     try {
       const existing = await AsyncStorage.getItem('gameSessionIds');
@@ -332,6 +472,7 @@ const PanoGameScreen: React.FC = () => {
   };
 
   const handleReturnToMainMenu = async (): Promise<void> => {
+    skipPersistRef.current = true;
     if (submitToLeaderboard && gameSessionId && currentScore > 0) {
       try {
         await submitScore(gameSessionId, currentScore, {
@@ -347,10 +488,59 @@ const PanoGameScreen: React.FC = () => {
     } else if (!submitToLeaderboard && currentScore > 0) {
       console.log('Skipping leaderboard submission per user choice');
     }
+    await clearPersistedGameState();
     clearSummaryTimeout();
     setShowGameSummary(false);
     navigation.navigate('MainMenu');
   };
+
+  useEffect(() => {
+    lastStateRef.current = {
+      panoramaUrl,
+      country,
+      countryCode,
+      displayName,
+      coord,
+      contributor,
+      guess,
+      guessCount,
+      incorrectGuesses,
+      feedback,
+      gameOver,
+      currentScore,
+      highScore,
+      nextRound,
+      roundNumber,
+      correctAnswers,
+      completedRounds,
+      showGameSummary,
+      gameSessionId,
+      submitToLeaderboard,
+      isContinued,
+    };
+  }, [
+    panoramaUrl,
+    country,
+    countryCode,
+    displayName,
+    coord,
+    contributor,
+    guess,
+    guessCount,
+    incorrectGuesses,
+    feedback,
+    gameOver,
+    currentScore,
+    highScore,
+    nextRound,
+    roundNumber,
+    correctAnswers,
+    completedRounds,
+    showGameSummary,
+    gameSessionId,
+    submitToLeaderboard,
+    isContinued,
+  ]);
 
   const styles = StyleSheet.create({
     container: {
@@ -525,9 +715,48 @@ const PanoGameScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    initializeGameSession();
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        clearSummaryTimeout();
+        if (!skipPersistRef.current) {
+          persistGameState();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
+    return () => subscription.remove();
+  }, [persistGameState]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const bootstrap = async () => {
+      const restored = await restorePersistedGameState();
+      if (!isMounted) return;
+
+      if (restored) {
+        prefetchNextRound();
+        return;
+      }
+
+      await clearPersistedGameState();
+      initializeGameSession();
+    };
+
+    bootstrap();
+
     return () => {
+      isMounted = false;
       clearSummaryTimeout();
+      if (!skipPersistRef.current) {
+        persistGameState();
+      } else {
+        skipPersistRef.current = false;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
