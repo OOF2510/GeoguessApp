@@ -503,7 +503,7 @@ const MainMenu: React.FC = () => {
       <View style={styles.content}>
         <View style={styles.titleContainer}>
           {/*<Text style={styles.title}>GeoFinder</Text>*/}
-          <Image source={require('../assets/logo.png')} style={styles.logo} />
+          <Image source={require('../../assets/logo.png')} style={styles.logo} />
         </View>
         <TouchableOpacity style={styles.button} onPress={handleStartGame}>
           <Text style={styles.buttonText}>Start Game</Text>
