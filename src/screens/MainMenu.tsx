@@ -502,7 +502,8 @@ const MainMenu: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>GeoFinder</Text>
+          {/*<Text style={styles.title}>GeoFinder</Text>*/}
+          <Image source={require('../assets/logo.png')} style={styles.logo} />
         </View>
         <TouchableOpacity style={styles.button} onPress={handleStartGame}>
           <Text style={styles.buttonText}>Start Game</Text>
@@ -685,12 +686,22 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   titleContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 15,
-    marginBottom: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+    marginBottom: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
   },
+  logo: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
+    opacity: 0.95,
+  },
+
   title: {
     fontSize: 32,
     fontWeight: 'bold',
