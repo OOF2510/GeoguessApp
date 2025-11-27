@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Dimensions,
+  Linking,
   // Animated,
   ImageSourcePropType,
   Modal,
@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   AppState,
   AppStateStatus,
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '../navigation/navigationTypes';
@@ -401,6 +402,16 @@ const MainMenu: React.FC = () => {
     setShowCredits(false);
     navigation.navigate('Licences');
   };
+  
+  const handleOpenGithub = async () => {
+    const url = 'https://github.com/oof2510/geofinder';
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      Linking.openURL(url);
+    } else {
+      Alert.alert('Error', `Couldn't open ${url}`);
+    }
+  };
 
   // const startTransition = () => {
   //   const nextIndex = (currentIndex + 1) % backgroundImages.length;
@@ -515,6 +526,10 @@ const MainMenu: React.FC = () => {
 
       <TouchableOpacity style={styles.creditsButton} onPress={handleCredits}>
         <Text style={styles.creditsButtonText}>Credits</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity style={styles.githubButton} onPress={handleOpenGithub}>
+        <Text style={styles.githubButtonText}>GitHub</Text>
       </TouchableOpacity>
 
       {/* Leaderboard Modal */}
@@ -736,6 +751,22 @@ const styles = StyleSheet.create({
   creditsButtonText: {
     color: 'rgba(255,255,255,0.9)',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  githubButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  githubButtonText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 10,
     fontWeight: '600',
   },
 });
