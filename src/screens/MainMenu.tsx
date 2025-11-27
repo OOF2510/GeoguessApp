@@ -696,8 +696,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   logo: {
-    width: 512,
-    height: 512,
+    width: 256,
+    height: 256,
     resizeMode: 'contain',
     opacity: 0.95,
   },
