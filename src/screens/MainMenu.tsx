@@ -78,6 +78,134 @@ const MainMenu: React.FC = () => {
   const lastStateRef = useRef<PersistedMainMenuState | null>(null);
   const skipPersistRef = useRef<boolean>(false);
 
+  const persistMainMenuState = useCallback(async (): Promise<void> => {
+    const snapshot = lastStateRef.current;
+
+    if (!snapshot) {
+      try {
+        await AsyncStorage.removeItem(MAIN_MENU_STATE_KEY);
+      } catch (error) {
+        console.error('Failed to clear main menu state:', error);
+      }
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem(
+        MAIN_MENU_STATE_KEY,
+        JSON.stringify({ ...snapshot, savedAt: Date.now() }),
+      );
+    } catch (error) {
+      console.error('Failed to persist main menu state:', error);
+    }
+  }, []);
+
+  const clearPersistedMainMenuState = useCallback(async (): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(MAIN_MENU_STATE_KEY);
+    } catch (error) {
+      console.error('Failed to clear main menu state:', error);
+    }
+  }, []);
+
+  const restorePersistedMainMenuState = useCallback(async (): Promise<boolean> => {
+    try {
+      const raw = await AsyncStorage.getItem(MAIN_MENU_STATE_KEY);
+      if (!raw) return false;
+
+      const parsed = JSON.parse(raw) as PersistedMainMenuState;
+      if (!parsed || typeof parsed.savedAt !== 'number') {
+        await clearPersistedMainMenuState();
+        return false;
+      }
+
+      const isExpired = Date.now() - parsed.savedAt > MAIN_MENU_STATE_MAX_AGE_MS;
+      if (isExpired) {
+        await clearPersistedMainMenuState();
+        return false;
+      }
+
+      setPrefetchedRound(parsed.prefetchedRound ?? null);
+      prefetchedRoundRef.current = parsed.prefetchedRound ?? null;
+      setCachedImages(
+        Array.isArray(parsed.cachedImages) ? parsed.cachedImages : [],
+      );
+      setCurrentIndex(
+        Number.isFinite(parsed.currentIndex) ? parsed.currentIndex : 0,
+      );
+      return true;
+    } catch (error) {
+      console.error('Failed to restore main menu state:', error);
+      return false;
+    }
+  }, [clearPersistedMainMenuState]);
+
+  const getRandomBackgroundImage = (cachedArray?: number[]) => {
+    // Use the passed cache if provided (so we can pick immediately after reading file),
+    // otherwise fall back to the cachedImages state.
+    const cache = Array.isArray(cachedArray) ? cachedArray : cachedImages;
+
+    // Build list of available indices excluding the recent cache
+    const availableIndices = backgroundImages
+      .map((_, i) => i)
+      .filter(i => !cache.includes(i));
+
+    // If all images were recently used, reset and pick any random one
+    if (availableIndices.length === 0) {
+      const idx = Math.floor(Math.random() * backgroundImages.length);
+      const newCache = [idx].slice(-4);
+      setCachedImages(newCache);
+      saveCachedImages(newCache);
+      return idx;
+    }
+
+    // Choose a random index from the available ones
+    const selectedIndex =
+      availableIndices[Math.floor(Math.random() * availableIndices.length)];
+
+    // Update cache with the selected image (keep last 4)
+    const newCache = [...cache, selectedIndex].slice(-4);
+    setCachedImages(newCache);
+    saveCachedImages(newCache);
+
+    return selectedIndex;
+  };
+
+  const saveCachedImages = async (newCache: number[]) => {
+    try {
+      const filePath = `${RNFS.CachesDirectoryPath}/lastUsedImages.json`;
+      await RNFS.writeFile(filePath, JSON.stringify(newCache), 'utf8');
+    } catch (error) {
+      console.error('Error saving cached images:', error);
+    }
+  };
+
+  const loadCachedImages = useCallback(async () => {
+    try {
+      const filePath = `${RNFS.CachesDirectoryPath}/lastUsedImages.json`;
+      const exists = await RNFS.exists(filePath);
+
+      let cached: number[] = [];
+      if (exists) {
+        const content = await RNFS.readFile(filePath, 'utf8');
+        cached = JSON.parse(content);
+        setCachedImages(cached);
+      } else {
+        // ensure state is initialized
+        setCachedImages([]);
+      }
+
+      // After loading the cache (or defaulting), pick a single random background once
+      const initialIndex = getRandomBackgroundImage(cached);
+      setCurrentIndex(initialIndex);
+    } catch (error) {
+      console.error('Error loading cached images:', error);
+      // Fallback: pick a random image based on current (possibly empty) cache state
+      const initialIndex = getRandomBackgroundImage();
+      setCurrentIndex(initialIndex);
+    }
+  }, [cachedImages]);
+
   // Preload images on component mount
   useEffect(() => {
     const preloadImages = async () => {
@@ -195,134 +323,6 @@ const MainMenu: React.FC = () => {
       return new Set<string>();
     }
   }, []);
-
-  const persistMainMenuState = useCallback(async (): Promise<void> => {
-    const snapshot = lastStateRef.current;
-
-    if (!snapshot) {
-      try {
-        await AsyncStorage.removeItem(MAIN_MENU_STATE_KEY);
-      } catch (error) {
-        console.error('Failed to clear main menu state:', error);
-      }
-      return;
-    }
-
-    try {
-      await AsyncStorage.setItem(
-        MAIN_MENU_STATE_KEY,
-        JSON.stringify({ ...snapshot, savedAt: Date.now() }),
-      );
-    } catch (error) {
-      console.error('Failed to persist main menu state:', error);
-    }
-  }, []);
-
-  const clearPersistedMainMenuState = useCallback(async (): Promise<void> => {
-    try {
-      await AsyncStorage.removeItem(MAIN_MENU_STATE_KEY);
-    } catch (error) {
-      console.error('Failed to clear main menu state:', error);
-    }
-  }, []);
-
-  const restorePersistedMainMenuState = useCallback(async (): Promise<boolean> => {
-    try {
-      const raw = await AsyncStorage.getItem(MAIN_MENU_STATE_KEY);
-      if (!raw) return false;
-
-      const parsed = JSON.parse(raw) as PersistedMainMenuState;
-      if (!parsed || typeof parsed.savedAt !== 'number') {
-        await clearPersistedMainMenuState();
-        return false;
-      }
-
-      const isExpired = Date.now() - parsed.savedAt > MAIN_MENU_STATE_MAX_AGE_MS;
-      if (isExpired) {
-        await clearPersistedMainMenuState();
-        return false;
-      }
-
-      setPrefetchedRound(parsed.prefetchedRound ?? null);
-      prefetchedRoundRef.current = parsed.prefetchedRound ?? null;
-      setCachedImages(
-        Array.isArray(parsed.cachedImages) ? parsed.cachedImages : [],
-      );
-      setCurrentIndex(
-        Number.isFinite(parsed.currentIndex) ? parsed.currentIndex : 0,
-      );
-      return true;
-    } catch (error) {
-      console.error('Failed to restore main menu state:', error);
-      return false;
-    }
-  }, [clearPersistedMainMenuState]);
-
-  const loadCachedImages = useCallback(async () => {
-    try {
-      const filePath = `${RNFS.CachesDirectoryPath}/lastUsedImages.json`;
-      const exists = await RNFS.exists(filePath);
-
-      let cached: number[] = [];
-      if (exists) {
-        const content = await RNFS.readFile(filePath, 'utf8');
-        cached = JSON.parse(content);
-        setCachedImages(cached);
-      } else {
-        // ensure state is initialized
-        setCachedImages([]);
-      }
-
-      // After loading the cache (or defaulting), pick a single random background once
-      const initialIndex = getRandomBackgroundImage(cached);
-      setCurrentIndex(initialIndex);
-    } catch (error) {
-      console.error('Error loading cached images:', error);
-      // Fallback: pick a random image based on current (possibly empty) cache state
-      const initialIndex = getRandomBackgroundImage();
-      setCurrentIndex(initialIndex);
-    }
-  }, [cachedImages]);
-
-  const saveCachedImages = async (newCache: number[]) => {
-    try {
-      const filePath = `${RNFS.CachesDirectoryPath}/lastUsedImages.json`;
-      await RNFS.writeFile(filePath, JSON.stringify(newCache), 'utf8');
-    } catch (error) {
-      console.error('Error saving cached images:', error);
-    }
-  };
-
-  const getRandomBackgroundImage = (cachedArray?: number[]) => {
-    // Use the passed cache if provided (so we can pick immediately after reading file),
-    // otherwise fall back to the cachedImages state.
-    const cache = Array.isArray(cachedArray) ? cachedArray : cachedImages;
-
-    // Build list of available indices excluding the recent cache
-    const availableIndices = backgroundImages
-      .map((_, i) => i)
-      .filter(i => !cache.includes(i));
-
-    // If all images were recently used, reset and pick any random one
-    if (availableIndices.length === 0) {
-      const idx = Math.floor(Math.random() * backgroundImages.length);
-      const newCache = [idx].slice(-4);
-      setCachedImages(newCache);
-      saveCachedImages(newCache);
-      return idx;
-    }
-
-    // Choose a random index from the available ones
-    const selectedIndex =
-      availableIndices[Math.floor(Math.random() * availableIndices.length)];
-
-    // Update cache with the selected image (keep last 4)
-    const newCache = [...cache, selectedIndex].slice(-4);
-    setCachedImages(newCache);
-    saveCachedImages(newCache);
-
-    return selectedIndex;
-  };
 
   const handleStartGame = () => {
     const hasRoundReady = prefetchedRound !== null;
