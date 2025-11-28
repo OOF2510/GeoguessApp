@@ -140,17 +140,13 @@ const MainMenu: React.FC = () => {
     }
   }, [clearPersistedMainMenuState]);
 
-  const getRandomBackgroundImage = (cachedArray?: number[]) => {
-    // Use the passed cache if provided (so we can pick immediately after reading file),
-    // otherwise fall back to the cachedImages state.
-    const cache = Array.isArray(cachedArray) ? cachedArray : cachedImages;
+  const getRandomBackgroundImage = useCallback((cache: number[] = []) => {
+    const recentCache = Array.isArray(cache) ? cache : [];
 
-    // Build list of available indices excluding the recent cache
     const availableIndices = backgroundImages
       .map((_, i) => i)
-      .filter(i => !cache.includes(i));
+      .filter(i => !recentCache.includes(i));
 
-    // If all images were recently used, reset and pick any random one
     if (availableIndices.length === 0) {
       const idx = Math.floor(Math.random() * backgroundImages.length);
       const newCache = [idx].slice(-4);
@@ -159,17 +155,15 @@ const MainMenu: React.FC = () => {
       return idx;
     }
 
-    // Choose a random index from the available ones
     const selectedIndex =
       availableIndices[Math.floor(Math.random() * availableIndices.length)];
 
-    // Update cache with the selected image (keep last 4)
-    const newCache = [...cache, selectedIndex].slice(-4);
+    const newCache = [...recentCache, selectedIndex].slice(-4);
     setCachedImages(newCache);
     saveCachedImages(newCache);
 
     return selectedIndex;
-  };
+  }, []);
 
   const saveCachedImages = async (newCache: number[]) => {
     try {
@@ -181,8 +175,9 @@ const MainMenu: React.FC = () => {
   };
 
   const loadCachedImages = useCallback(async () => {
+    const filePath = `${RNFS.CachesDirectoryPath}/lastUsedImages.json`;
+
     try {
-      const filePath = `${RNFS.CachesDirectoryPath}/lastUsedImages.json`;
       const exists = await RNFS.exists(filePath);
 
       let cached: number[] = [];
@@ -191,20 +186,17 @@ const MainMenu: React.FC = () => {
         cached = JSON.parse(content);
         setCachedImages(cached);
       } else {
-        // ensure state is initialized
         setCachedImages([]);
       }
 
-      // After loading the cache (or defaulting), pick a single random background once
       const initialIndex = getRandomBackgroundImage(cached);
       setCurrentIndex(initialIndex);
     } catch (error) {
       console.error('Error loading cached images:', error);
-      // Fallback: pick a random image based on current (possibly empty) cache state
-      const initialIndex = getRandomBackgroundImage();
+      const initialIndex = getRandomBackgroundImage([]);
       setCurrentIndex(initialIndex);
     }
-  }, [cachedImages]);
+  }, [getRandomBackgroundImage]);
 
   // Preload images on component mount
   useEffect(() => {
@@ -276,9 +268,10 @@ const MainMenu: React.FC = () => {
       const restored = await restorePersistedMainMenuState();
       if (!isMounted) return;
 
+      await loadCachedImages();
+
       if (!restored) {
         await clearPersistedMainMenuState();
-        await loadCachedImages();
         prefetchInitialRound();
       }
     };
