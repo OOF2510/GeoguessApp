@@ -397,14 +397,13 @@ const MainMenu: React.FC = () => {
   };
   
   const handleOpenGithub = async () => {
-    const url = 'https://github.com/oof2510/geofinder';
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
-      Linking.openURL(url);
-    } else {
-      Alert.alert('Error', `Couldn't open ${url}`);
-    }
-  };
+  const url = 'https://github.com/oof2510/geofinder';
+  try {
+    await Linking.openURL(url);
+  } catch (err) {
+    Alert.alert('Error', `Couldn't open GitHub → ${err.message}`);
+  }
+};
 
   // const startTransition = () => {
   //   const nextIndex = (currentIndex + 1) % backgroundImages.length;
