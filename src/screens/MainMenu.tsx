@@ -401,7 +401,8 @@ const MainMenu: React.FC = () => {
   try {
     await Linking.openURL(url);
   } catch (err) {
-    Alert.alert('Error', `Couldn't open GitHub → ${err.message}`);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    Alert.alert('Error', `Couldn't open GitHub → ${errorMessage}`);
   }
 };
 
