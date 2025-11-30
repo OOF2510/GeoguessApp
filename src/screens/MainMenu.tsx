@@ -77,6 +77,7 @@ const MainMenu: React.FC = () => {
   );
   const lastStateRef = useRef<PersistedMainMenuState | null>(null);
   const skipPersistRef = useRef<boolean>(false);
+  const isMountedRef = useRef<boolean>(true);
 
   const persistMainMenuState = useCallback(async (): Promise<void> => {
     const snapshot = lastStateRef.current;
@@ -184,17 +185,25 @@ const MainMenu: React.FC = () => {
       if (exists) {
         const content = await RNFS.readFile(filePath, 'utf8');
         cached = JSON.parse(content);
-        setCachedImages(cached);
+        if (isMountedRef.current) {
+          setCachedImages(cached);
+        }
       } else {
-        setCachedImages([]);
+        if (isMountedRef.current) {
+          setCachedImages([]);
+        }
       }
 
       const initialIndex = getRandomBackgroundImage(cached);
-      setCurrentIndex(initialIndex);
+      if (isMountedRef.current) {
+        setCurrentIndex(initialIndex);
+      }
     } catch (error) {
       console.error('Error loading cached images:', error);
       const initialIndex = getRandomBackgroundImage([]);
-      setCurrentIndex(initialIndex);
+      if (isMountedRef.current) {
+        setCurrentIndex(initialIndex);
+      }
     }
   }, [getRandomBackgroundImage]);
 
@@ -220,16 +229,24 @@ const MainMenu: React.FC = () => {
     try {
       const result = await getImageWithCountry();
       if (result) {
+        if (!isMountedRef.current) {
+          return;
+        }
         setPrefetchedRound({
           image: result.image,
           countryInfo: result.countryInfo,
         });
       } else {
+        if (!isMountedRef.current) {
+          return;
+        }
         setPrefetchedRound(null);
       }
     } catch (error) {
       console.error('Error prefetching initial round:', error);
-      setPrefetchedRound(null);
+      if (isMountedRef.current) {
+        setPrefetchedRound(null);
+      }
     }
     isPrefetchingRef.current = false;
   }, []);
@@ -308,6 +325,7 @@ const MainMenu: React.FC = () => {
     bootstrap();
 
     return () => {
+      isMountedRef.current = false;
       isMounted = false;
       prefetchAborted = true;
       if (!skipPersistRef.current) {
