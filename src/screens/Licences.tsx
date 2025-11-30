@@ -84,14 +84,16 @@ const Licences: React.FC = () => {
           </Text>
         </View>
 
-        <View style={styles.section}>
+<View style={styles.section}>
           <Text style={styles.sectionTitle}>AI Models</Text>
           <Text style={styles.licenseText}>
             AI models used for AI 1v1 provided by OpenRouter:{'\n'}- Mistral
-            Small 3.2 24B Instruct: licensed under Apache-2.0{'\n'}- Google
+            Small 3.1 24B Instruct: licensed under Apache-2.0{'\n'}- Google
             Gemma 3 27B: Gemma is provided under and subject to the Gemma Terms
-            of Use found at {renderLink('https://ai.google.dev/gemma/terms')}-
-            Qwen 2.5 VL 32B Instruct: licensed under Apache-2.0{'\n'}
+            of Use found at{' '}
+            {renderLink('https://ai.google.dev/gemma/terms')}
+            {'\n'}- NVIDIA Nemotron Nano 12B v2 VL: licensed under the NVIDIA
+            Open Model License{'\n'}
             For more details on Apache-2.0:{' '}
             {renderLink('https://www.apache.org/licenses/LICENSE-2.0')}
           </Text>
