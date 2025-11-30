@@ -683,11 +683,11 @@ const MainMenu: React.FC = () => {
                   {'\n'}
                   {'\n'}
                   AI models used for AI 1v1 provided by OpenRouter:
-                  {'\n'}- Mistral Small 3.2 24B Instruct: licensed under
+                  {'\n'}- Mistral Small 3.1 24B Instruct: licensed under
                   Apache-2.0 (see licenses)
                   {'\n'}- Google Gemma 3 27B: licenced under the Gemma licence
                   (see licences)
-                  {'\n'}- Qwen 2.5 VL 32B Instruct: licensed under Apache-2.0
+                  {'\n'}- Nvidia Nemotron Nano 12B v2 VL: licensed the NVIDIA Open Model Licence
                   (see licenses)
                 </Text>
               </View>
