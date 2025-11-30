@@ -241,7 +241,29 @@ const MainMenu: React.FC = () => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
       if (nextState === 'background' || nextState === 'inactive') {
         if (!skipPersistRef.current) {
-          persistMainMenuState();
+          const snapshot = lastStateRef.current;
+
+          if (!snapshot) {
+            try {
+              AsyncStorage.removeItem(MAIN_MENU_STATE_KEY).catch(error =>
+                console.error('Failed to clear main menu state:', error),
+              );
+            } catch (error) {
+              console.error('Failed to clear main menu state:', error);
+            }
+            return;
+          }
+
+          try {
+            AsyncStorage.setItem(
+              MAIN_MENU_STATE_KEY,
+              JSON.stringify({ ...snapshot, savedAt: Date.now() }),
+            ).catch(error =>
+              console.error('Failed to persist main menu state:', error),
+            );
+          } catch (error) {
+            console.error('Failed to persist main menu state:', error);
+          }
         }
       }
     };
@@ -251,7 +273,7 @@ const MainMenu: React.FC = () => {
       handleAppStateChange,
     );
     return () => subscription.remove();
-  }, [persistMainMenuState]);
+  }, []);
 
   useEffect(() => {
     lastStateRef.current = {
@@ -263,16 +285,23 @@ const MainMenu: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
+    let prefetchAborted = false;
 
     const bootstrap = async () => {
-      const restored = await restorePersistedMainMenuState();
-      if (!isMounted) return;
+      try {
+        const restored = await restorePersistedMainMenuState();
+        if (!isMounted || prefetchAborted) return;
 
-      await loadCachedImages();
+        await loadCachedImages();
+        if (!isMounted || prefetchAborted) return;
 
-      if (!restored) {
-        await clearPersistedMainMenuState();
-        prefetchInitialRound();
+        if (!restored) {
+          await clearPersistedMainMenuState();
+          if (!isMounted || prefetchAborted) return;
+          prefetchInitialRound();
+        }
+      } catch (error) {
+        console.error('Error during MainMenu bootstrap:', error);
       }
     };
 
@@ -280,19 +309,26 @@ const MainMenu: React.FC = () => {
 
     return () => {
       isMounted = false;
+      prefetchAborted = true;
       if (!skipPersistRef.current) {
-        persistMainMenuState();
+        const snapshot = lastStateRef.current;
+        if (snapshot) {
+          try {
+            AsyncStorage.setItem(
+              MAIN_MENU_STATE_KEY,
+              JSON.stringify({ ...snapshot, savedAt: Date.now() }),
+            ).catch(error =>
+              console.error('Failed to persist main menu state on unmount:', error),
+            );
+          } catch (error) {
+            console.error('Failed to persist main menu state on unmount:', error);
+          }
+        }
       } else {
         skipPersistRef.current = false;
       }
     };
-  }, [
-    clearPersistedMainMenuState,
-    loadCachedImages,
-    persistMainMenuState,
-    prefetchInitialRound,
-    restorePersistedMainMenuState,
-  ]);
+  }, [clearPersistedMainMenuState, loadCachedImages, prefetchInitialRound, restorePersistedMainMenuState]);
 
   const loadUserGameSessionIds = useCallback(async (): Promise<Set<string>> => {
     try {

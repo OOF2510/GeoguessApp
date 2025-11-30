@@ -667,7 +667,19 @@ const GameScreen: React.FC = () => {
       if (nextState === 'background' || nextState === 'inactive') {
         clearSummaryTimeout();
         if (!skipPersistRef.current) {
-          persistGameState();
+          const snapshot = lastStateRef.current;
+          if (snapshot) {
+            try {
+              AsyncStorage.setItem(
+                GAME_STATE_STORAGE_KEY,
+                JSON.stringify({ ...snapshot, savedAt: Date.now() }),
+              ).catch(error =>
+                console.error('Failed to persist game state:', error),
+              );
+            } catch (error) {
+              console.error('Failed to persist game state:', error);
+            }
+          }
         }
       }
     };
@@ -677,32 +689,54 @@ const GameScreen: React.FC = () => {
       handleAppStateChange,
     );
     return () => subscription.remove();
-  }, [persistGameState]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
+    let prefetchAborted = false;
 
     const bootstrap = async () => {
-      const restored = await restorePersistedGameState();
-      if (!isMounted) return;
+      try {
+        const restored = await restorePersistedGameState();
+        if (!isMounted || prefetchAborted) return;
 
-      if (restored) {
-        setLoading(false);
-        prefetchNextRound();
-        return;
+        if (restored) {
+          setLoading(false);
+          prefetchNextRound();
+          return;
+        }
+
+        await clearPersistedGameState();
+        if (!isMounted || prefetchAborted) return;
+        initializeGameSession();
+      } catch (error) {
+        console.error('Error during GameScreen bootstrap:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-
-      await clearPersistedGameState();
-      initializeGameSession();
     };
 
     bootstrap();
 
     return () => {
       isMounted = false;
+      prefetchAborted = true;
       clearSummaryTimeout();
       if (!skipPersistRef.current) {
-        persistGameState();
+        const snapshot = lastStateRef.current;
+        if (snapshot) {
+          try {
+            AsyncStorage.setItem(
+              GAME_STATE_STORAGE_KEY,
+              JSON.stringify({ ...snapshot, savedAt: Date.now() }),
+            ).catch(error =>
+              console.error('Failed to persist game state on unmount:', error),
+            );
+          } catch (error) {
+            console.error('Failed to persist game state on unmount:', error);
+          }
+        }
       } else {
         skipPersistRef.current = false;
       }

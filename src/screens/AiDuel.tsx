@@ -289,7 +289,19 @@ const AiDuel: React.FC = () => {
   useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
       if (nextState === 'background' || nextState === 'inactive') {
-        persistAiDuelState();
+        const snapshot = lastStateRef?.current;
+        if (snapshot) {
+          try {
+            AsyncStorage.setItem(
+              STATE_STORAGE_KEY,
+              JSON.stringify({ ...snapshot, savedAt: Date.now() }),
+            ).catch(error =>
+              console.error('Failed to persist AI duel state:', error),
+            );
+          } catch (error) {
+            console.error('Failed to persist AI duel state:', error);
+          }
+        }
       }
     };
 
@@ -298,7 +310,7 @@ const AiDuel: React.FC = () => {
       handleAppStateChange,
     );
     return () => subscription.remove();
-  }, [persistAiDuelState]);
+  }, []);
 
   useEffect(() => {
     const backAction = (): boolean => {
