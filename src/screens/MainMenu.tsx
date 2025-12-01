@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
   AppState,
   AppStateStatus,
-  Alert
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '../navigation/navigationTypes';
@@ -109,37 +109,39 @@ const MainMenu: React.FC = () => {
     }
   }, []);
 
-  const restorePersistedMainMenuState = useCallback(async (): Promise<boolean> => {
-    try {
-      const raw = await AsyncStorage.getItem(MAIN_MENU_STATE_KEY);
-      if (!raw) return false;
+  const restorePersistedMainMenuState =
+    useCallback(async (): Promise<boolean> => {
+      try {
+        const raw = await AsyncStorage.getItem(MAIN_MENU_STATE_KEY);
+        if (!raw) return false;
 
-      const parsed = JSON.parse(raw) as PersistedMainMenuState;
-      if (!parsed || typeof parsed.savedAt !== 'number') {
-        await clearPersistedMainMenuState();
+        const parsed = JSON.parse(raw) as PersistedMainMenuState;
+        if (!parsed || typeof parsed.savedAt !== 'number') {
+          await clearPersistedMainMenuState();
+          return false;
+        }
+
+        const isExpired =
+          Date.now() - parsed.savedAt > MAIN_MENU_STATE_MAX_AGE_MS;
+        if (isExpired) {
+          await clearPersistedMainMenuState();
+          return false;
+        }
+
+        setPrefetchedRound(parsed.prefetchedRound ?? null);
+        prefetchedRoundRef.current = parsed.prefetchedRound ?? null;
+        setCachedImages(
+          Array.isArray(parsed.cachedImages) ? parsed.cachedImages : [],
+        );
+        setCurrentIndex(
+          Number.isFinite(parsed.currentIndex) ? parsed.currentIndex : 0,
+        );
+        return true;
+      } catch (error) {
+        console.error('Failed to restore main menu state:', error);
         return false;
       }
-
-      const isExpired = Date.now() - parsed.savedAt > MAIN_MENU_STATE_MAX_AGE_MS;
-      if (isExpired) {
-        await clearPersistedMainMenuState();
-        return false;
-      }
-
-      setPrefetchedRound(parsed.prefetchedRound ?? null);
-      prefetchedRoundRef.current = parsed.prefetchedRound ?? null;
-      setCachedImages(
-        Array.isArray(parsed.cachedImages) ? parsed.cachedImages : [],
-      );
-      setCurrentIndex(
-        Number.isFinite(parsed.currentIndex) ? parsed.currentIndex : 0,
-      );
-      return true;
-    } catch (error) {
-      console.error('Failed to restore main menu state:', error);
-      return false;
-    }
-  }, [clearPersistedMainMenuState]);
+    }, [clearPersistedMainMenuState]);
 
   const getRandomBackgroundImage = useCallback((cache: number[] = []) => {
     const recentCache = Array.isArray(cache) ? cache : [];
@@ -282,6 +284,10 @@ const MainMenu: React.FC = () => {
             console.error('Failed to persist main menu state:', error);
           }
         }
+      } else if (nextState === 'active') {
+        restorePersistedMainMenuState().catch(error =>
+          console.error('Failed to restore main menu state:', error),
+        );
       }
     };
 
@@ -336,17 +342,28 @@ const MainMenu: React.FC = () => {
               MAIN_MENU_STATE_KEY,
               JSON.stringify({ ...snapshot, savedAt: Date.now() }),
             ).catch(error =>
-              console.error('Failed to persist main menu state on unmount:', error),
+              console.error(
+                'Failed to persist main menu state on unmount:',
+                error,
+              ),
             );
           } catch (error) {
-            console.error('Failed to persist main menu state on unmount:', error);
+            console.error(
+              'Failed to persist main menu state on unmount:',
+              error,
+            );
           }
         }
       } else {
         skipPersistRef.current = false;
       }
     };
-  }, [clearPersistedMainMenuState, loadCachedImages, prefetchInitialRound, restorePersistedMainMenuState]);
+  }, [
+    clearPersistedMainMenuState,
+    loadCachedImages,
+    prefetchInitialRound,
+    restorePersistedMainMenuState,
+  ]);
 
   const loadUserGameSessionIds = useCallback(async (): Promise<Set<string>> => {
     try {
@@ -449,16 +466,16 @@ const MainMenu: React.FC = () => {
     setShowCredits(false);
     navigation.navigate('Licences');
   };
-  
+
   const handleOpenGithub = async () => {
-  const url = 'https://github.com/oof2510/geofinder';
-  try {
-    await Linking.openURL(url);
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    Alert.alert('Error', `Couldn't open GitHub → ${errorMessage}`);
-  }
-};
+    const url = 'https://github.com/oof2510/geofinder';
+    try {
+      await Linking.openURL(url);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      Alert.alert('Error', `Couldn't open GitHub → ${errorMessage}`);
+    }
+  };
 
   // const startTransition = () => {
   //   const nextIndex = (currentIndex + 1) % backgroundImages.length;
@@ -550,7 +567,10 @@ const MainMenu: React.FC = () => {
       <View style={styles.content}>
         <View style={styles.titleContainer}>
           {/*<Text style={styles.title}>GeoFinder</Text>*/}
-          <Image source={require('../../assets/logo.png')} style={styles.logo} />
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+          />
         </View>
         <TouchableOpacity style={styles.button} onPress={handleStartGame}>
           <Text style={styles.buttonText}>Start Game</Text>
@@ -575,7 +595,7 @@ const MainMenu: React.FC = () => {
       <TouchableOpacity style={styles.creditsButton} onPress={handleCredits}>
         <Text style={styles.creditsButtonText}>Credits</Text>
       </TouchableOpacity>
-      
+
       <TouchableOpacity style={styles.githubButton} onPress={handleOpenGithub}>
         <Text style={styles.githubButtonText}>GitHub</Text>
       </TouchableOpacity>
@@ -687,8 +707,8 @@ const MainMenu: React.FC = () => {
                   Apache-2.0 (see licenses)
                   {'\n'}- Google Gemma 3 27B: licenced under the Gemma licence
                   (see licences)
-                  {'\n'}- Nvidia Nemotron Nano 12B v2 VL: licensed the NVIDIA Open Model Licence
-                  (see licenses)
+                  {'\n'}- Nvidia Nemotron Nano 12B v2 VL: licensed the NVIDIA
+                  Open Model Licence (see licenses)
                 </Text>
               </View>
             </ScrollView>

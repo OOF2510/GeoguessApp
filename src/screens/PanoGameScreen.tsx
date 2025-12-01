@@ -412,7 +412,9 @@ const PanoGameScreen: React.FC = () => {
       );
       setHighScore(Number.isFinite(parsed.highScore) ? parsed.highScore : 0);
       setNextRound(parsed.nextRound ?? null);
-      setRoundNumber(Number.isFinite(parsed.roundNumber) ? parsed.roundNumber : 1);
+      setRoundNumber(
+        Number.isFinite(parsed.roundNumber) ? parsed.roundNumber : 1,
+      );
       setCorrectAnswers(
         Number.isFinite(parsed.correctAnswers) ? parsed.correctAnswers : 0,
       );
@@ -779,10 +781,16 @@ const PanoGameScreen: React.FC = () => {
               GAME_STATE_STORAGE_KEY,
               JSON.stringify({ ...snapshot, savedAt: Date.now() }),
             ).catch(error =>
-              console.error('Failed to persist pano game state on unmount:', error),
+              console.error(
+                'Failed to persist pano game state on unmount:',
+                error,
+              ),
             );
           } catch (error) {
-            console.error('Failed to persist pano game state on unmount:', error);
+            console.error(
+              'Failed to persist pano game state on unmount:',
+              error,
+            );
           }
         }
       } else {

@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   Text,
@@ -163,7 +169,9 @@ const AiDuel: React.FC = () => {
 
     if (
       !snapshot ||
-      (!snapshot.matchId && !snapshot.prefetchedImageUrl && !snapshot.currentRound)
+      (!snapshot.matchId &&
+        !snapshot.prefetchedImageUrl &&
+        !snapshot.currentRound)
     ) {
       try {
         await AsyncStorage.removeItem(STATE_STORAGE_KEY);
@@ -191,49 +199,52 @@ const AiDuel: React.FC = () => {
     }
   }, []);
 
-  const restorePersistedAiDuelState = useCallback(async (): Promise<boolean> => {
-    try {
-      const raw = await AsyncStorage.getItem(STATE_STORAGE_KEY);
-      if (!raw) return false;
+  const restorePersistedAiDuelState =
+    useCallback(async (): Promise<boolean> => {
+      try {
+        const raw = await AsyncStorage.getItem(STATE_STORAGE_KEY);
+        if (!raw) return false;
 
-      const parsed = JSON.parse(raw) as PersistedAiDuelState;
-      if (!parsed || typeof parsed.savedAt !== 'number') {
-        await clearPersistedAiDuelState();
+        const parsed = JSON.parse(raw) as PersistedAiDuelState;
+        if (!parsed || typeof parsed.savedAt !== 'number') {
+          await clearPersistedAiDuelState();
+          return false;
+        }
+
+        const isExpired = Date.now() - parsed.savedAt > STATE_MAX_AGE_MS;
+        if (isExpired) {
+          await clearPersistedAiDuelState();
+          return false;
+        }
+
+        setMatchId(typeof parsed.matchId === 'string' ? parsed.matchId : null);
+        setCurrentRound(parsed.currentRound ?? null);
+        setQueuedRound(parsed.queuedRound ?? null);
+        setTotalRounds(
+          Number.isFinite(parsed.totalRounds) ? parsed.totalRounds : 0,
+        );
+        setScores(parsed.scores ?? { ...DEFAULT_SCORES });
+        setStatus(parsed.status ?? 'in-progress');
+        setGuess(typeof parsed.guess === 'string' ? parsed.guess : '');
+        setLatestResult(parsed.latestResult ?? null);
+        setHistory(Array.isArray(parsed.history) ? parsed.history : []);
+        setPrefetchedImageUrl(
+          typeof parsed.prefetchedImageUrl === 'string'
+            ? parsed.prefetchedImageUrl
+            : parsed.prefetchedRoundUrl ?? null,
+        );
+        setErrorMessage(
+          typeof parsed.errorMessage === 'string' ? parsed.errorMessage : '',
+        );
+        setLoading(false);
+        setSubmitting(false);
+        setZoomImage(false);
+        return Boolean(parsed.matchId || parsed.currentRound);
+      } catch (error) {
+        console.error('Failed to restore AI duel state:', error);
         return false;
       }
-
-      const isExpired = Date.now() - parsed.savedAt > STATE_MAX_AGE_MS;
-      if (isExpired) {
-        await clearPersistedAiDuelState();
-        return false;
-      }
-
-      setMatchId(typeof parsed.matchId === 'string' ? parsed.matchId : null);
-      setCurrentRound(parsed.currentRound ?? null);
-      setQueuedRound(parsed.queuedRound ?? null);
-      setTotalRounds(Number.isFinite(parsed.totalRounds) ? parsed.totalRounds : 0);
-      setScores(parsed.scores ?? { ...DEFAULT_SCORES });
-      setStatus(parsed.status ?? 'in-progress');
-      setGuess(typeof parsed.guess === 'string' ? parsed.guess : '');
-      setLatestResult(parsed.latestResult ?? null);
-      setHistory(Array.isArray(parsed.history) ? parsed.history : []);
-      setPrefetchedImageUrl(
-        typeof parsed.prefetchedImageUrl === 'string'
-          ? parsed.prefetchedImageUrl
-          : parsed.prefetchedRoundUrl ?? null,
-      );
-      setErrorMessage(
-        typeof parsed.errorMessage === 'string' ? parsed.errorMessage : '',
-      );
-      setLoading(false);
-      setSubmitting(false);
-      setZoomImage(false);
-      return Boolean(parsed.matchId || parsed.currentRound);
-    } catch (error) {
-      console.error('Failed to restore AI duel state:', error);
-      return false;
-    }
-  }, [clearPersistedAiDuelState]);
+    }, [clearPersistedAiDuelState]);
 
   const bootstrap = useCallback(async (): Promise<void> => {
     setLoading(true);
