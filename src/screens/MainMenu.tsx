@@ -128,14 +128,16 @@ const MainMenu: React.FC = () => {
           return false;
         }
 
-        setPrefetchedRound(parsed.prefetchedRound ?? null);
-        prefetchedRoundRef.current = parsed.prefetchedRound ?? null;
-        setCachedImages(
-          Array.isArray(parsed.cachedImages) ? parsed.cachedImages : [],
-        );
-        setCurrentIndex(
-          Number.isFinite(parsed.currentIndex) ? parsed.currentIndex : 0,
-        );
+        if (isMountedRef.current) {
+          setPrefetchedRound(parsed.prefetchedRound ?? null);
+          prefetchedRoundRef.current = parsed.prefetchedRound ?? null;
+          setCachedImages(
+            Array.isArray(parsed.cachedImages) ? parsed.cachedImages : [],
+          );
+          setCurrentIndex(
+            Number.isFinite(parsed.currentIndex) ? parsed.currentIndex : 0,
+          );
+        }
         return true;
       } catch (error) {
         console.error('Failed to restore main menu state:', error);
