@@ -78,6 +78,7 @@ const MainMenu: React.FC = () => {
   const lastStateRef = useRef<PersistedMainMenuState | null>(null);
   const skipPersistRef = useRef<boolean>(false);
   const isMountedRef = useRef<boolean>(true);
+  const appActiveRef = useRef<boolean>(true);
 
   const persistMainMenuState = useCallback(async (): Promise<void> => {
     const snapshot = lastStateRef.current;
@@ -259,16 +260,19 @@ const MainMenu: React.FC = () => {
   }, [prefetchedRound]);
 
   useEffect(() => {
-    const handleAppStateChange = (nextState: AppStateStatus) => {
+    let isCleaningUp = false;
+
+    const handleAppStateChange = async (nextState: AppStateStatus) => {
+      if (isCleaningUp) return;
+
       if (nextState === 'background' || nextState === 'inactive') {
-        if (!skipPersistRef.current) {
+        appActiveRef.current = false;
+        if (!skipPersistRef.current && isMountedRef.current) {
           const snapshot = lastStateRef.current;
 
           if (!snapshot) {
             try {
-              AsyncStorage.removeItem(MAIN_MENU_STATE_KEY).catch(error =>
-                console.error('Failed to clear main menu state:', error),
-              );
+              await AsyncStorage.removeItem(MAIN_MENU_STATE_KEY);
             } catch (error) {
               console.error('Failed to clear main menu state:', error);
             }
@@ -276,20 +280,21 @@ const MainMenu: React.FC = () => {
           }
 
           try {
-            AsyncStorage.setItem(
+            await AsyncStorage.setItem(
               MAIN_MENU_STATE_KEY,
               JSON.stringify({ ...snapshot, savedAt: Date.now() }),
-            ).catch(error =>
-              console.error('Failed to persist main menu state:', error),
             );
           } catch (error) {
             console.error('Failed to persist main menu state:', error);
           }
         }
       } else if (nextState === 'active') {
-        restorePersistedMainMenuState().catch(error =>
-          console.error('Failed to restore main menu state:', error),
-        );
+        appActiveRef.current = true;
+        try {
+          await restorePersistedMainMenuState();
+        } catch (error) {
+          console.error('Failed to restore main menu state:', error);
+        }
       }
     };
 
@@ -297,8 +302,14 @@ const MainMenu: React.FC = () => {
       'change',
       handleAppStateChange,
     );
-    return () => subscription.remove();
-  }, []);
+
+    return () => {
+      isCleaningUp = true;
+      appActiveRef.current = false;
+      isMountedRef.current = false;
+      subscription.remove();
+    };
+  }, [restorePersistedMainMenuState]);
 
   useEffect(() => {
     lastStateRef.current = {
@@ -333,10 +344,12 @@ const MainMenu: React.FC = () => {
     bootstrap();
 
     return () => {
-      isMountedRef.current = false;
       isMounted = false;
       prefetchAborted = true;
-      if (!skipPersistRef.current) {
+      isMountedRef.current = false;
+
+      // Only persist state if component is not unmounting due to app backgrounding
+      if (!skipPersistRef.current && appActiveRef.current) {
         const snapshot = lastStateRef.current;
         if (snapshot) {
           try {
